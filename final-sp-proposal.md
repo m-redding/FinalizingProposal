@@ -70,7 +70,8 @@ var producer = new StreamingProducer(connectionString, eventHubName);
 ```
 
 ### Creating the client with custom options
-
+TODO: update
+The application can decide if it wants to send multiple batches to the same partition concurrently. The default value of `MaximumConcurrentSendsPerPartition` is 1, meaning that the producer will try to publish a batch to a partition and then finish applying the retry policy before trying to publish another batch to that same partition. This is useful when events are independent and can be processed in parallel without worrying about which was processed first. This functionality cannot be used at the same time as idempotency however, since idempotency inherently depends on event ordering. 
 ```csharp  
 var connectionString = "<< CONNECTION STRING >>";
 var eventHubName = "<< EVENT HUB NAME >>";
@@ -94,23 +95,6 @@ var eventHubName = "<< NAME OF THE EVENT HUB >>";
 
 // Create the streaming producer with default options
 var producer = new StreamingProducer(fullyQualifiedNamespace, eventHubName, credential);
-```
-
-### Creating client to send batches to the same partition concurrently
-
-The application can decide if it wants to send multiple batches to the same partition concurrently. The default value of `MaximumConcurrentSendsPerPartition` is 1, meaning that the producer will try to publish a batch to a partition and then finish applying the retry policy before trying to publish another batch to that same partition. This is useful when events are independent and can be processed in parallel without worrying about which was processed first. This functionality cannot be used at the same time as idempotency however, since idempotency inherently depends on event ordering. 
-
-```csharp 
-var connectionString = "<< CONNECTION STRING >>";
-var eventHubName = "<< EVENT HUB NAME >>";
-
-// Create the streaming producer
-
-var producer = new StreamingProducer(connectionString, eventHubName, new StreamingProducerOptions
-{
-    // Producer will try to publish up to 4 batches at the same time to each partition
-    MaximumConcurrentSendsPerPartition = 4; 
-});    
 ```
 
 ### Publish events using the Streaming Producer
@@ -491,51 +475,9 @@ try
 finally
 {
     // Close with the clear flag set to true clears all pending queued events and then shuts down the producer
-    await producer.CloseAsync(true);
+    await producer.CloseAsync(abandonPendingEvents: true);
 }
 ```
-
-### Using idempotent retries
-
-```csharp
-// Use the streaming producer options to enable idempotent retries
-var clientOptions = new StreamingProducerOptions
-{
-    EnableIdempotentRetries = true
-};
-
-// Create the streaming producer
-var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>", clientOptions);
-
-// Define the Handlers
-Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) {...}
-Task SendFailedHandler(SendEventBatchFailedEventArgs args) {...}
-
-// Add the handlers to the producer
-producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
-producer.SendEventBatchFailedAsync += SendFailedHandler;
-
-try
-{
-    // Enqueue some events
-    while (TryGetNextEvent(out var eventData))
-    {
-        // This method waits until the queue has room for the given event
-        await producer.EnqueueEventAsync(eventData);
-    }
-}
-finally
-{
-    // Close sends all pending queued events and then shuts down the producer
-    await producer.CloseAsync();
-}
-```
-## Future Enhancements for Discussion
-- `SendAsync(int partitionId)` which flushes the queue for partition `partitionId` 
-- `SendAsync(string partitionKey)` which flushes the queue for the partition mapped to by `partitionKey`
-- Customizable hash functions for mapping a partition key to a partition, could be:
-    - Func passed through the options 
-    - overloadable method
 
 ## API skeleton
 This API skeleton includes the planned additional features as demonstrated above.
