@@ -143,7 +143,7 @@ finally
 ```
 
 ### Publish a set of events using the Streaming Producer
-If the application would like to send an enumerable full of events, the `EnqueueEventAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken = default)` overload provides functionality for this. An important thing to note however, is that events queued together will not necessarily be sent in the same batch. This allows the application to enqueue as many events as they want without worrying about the size of a batch. If a partition id or partition key is not specified, they also may not get sent to the same partition.
+If the application would like to send an enumerable full of events, the `EnqueueEventAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken = default)` overload provides functionality for this. An important thing to note however, is that events queued together will not necessarily be sent in the same batch. This allows the application to enqueue as many events as they want without worrying about the size of a batch. 
 
 This overload is not available in the synchronous enqueuing method, since that introduces partial failures and successes, which in turn introduces additional unnecessary complexity to the application.
 ```csharp
