@@ -20,7 +20,7 @@ The streaming producer is also directly competitive with Kafka's Producer, which
 
 ## Goals
 
-Support methods that allow applications to request to queue an event for publishing and receive notification when publishing of that event was successful or has failed.  The client should handle all details around queuing events, building efficient batches, and scheduling publishing.  
+Allow developers to enqueue events to be efficiently published without being burdened with managing batches or needing a deep understanding of Event Hubs partitioning. Publishing behavior should be understandable and performance consistent regardless of the pattern of events being enqueued.
 
 ## High level scenarios
 
