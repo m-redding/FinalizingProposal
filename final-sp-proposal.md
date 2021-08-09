@@ -422,21 +422,9 @@ var hub = "<< EVENT HUB NAME >>";
 var producer = new StreamingProducer(connectionString, hub);
 
 // Define the Handlers
-Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
-{
-    Console.WriteLine($"The following batch was published by { args.PartitionId }:");
-    foreach (var eventData in args.EventBatch)
-    {
-        Console.WriteLine($"Event Body is: { eventData.EventBody.ToString() }");
-    }
-    return Task.CompletedTask;
-}
-
-Task SendFailedHandler(SendEventBatchFailedEventArgs args)
-{
-    Console.WriteLine($"Publishing FAILED due to { args.Exception.Message } in partition { args.PartitionId }");
-    return Task.CompletedTask;
-}
+// Detailed discussion on real-world handler scenarios can be found above.
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) => Task.CompletedTask;
+Task SendFailedHandler(SendEventBatchFailedEventArgs args) => Task.CompletedTask;
 
 // Add the handlers to the producer
 producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
