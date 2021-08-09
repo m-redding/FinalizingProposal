@@ -80,7 +80,7 @@ var producer = new StreamingProducer(connectionString, eventHubName, new Streami
 {
     Identifier = "My Custom Streaming Producer",
     MaximumWaitTime = TimeSpan.FromMilliseconds(500),
-    MaximumQueuedEventLimit = 500
+    MaximumPendingEventCount = 500
     RetryOptions = new EventHubsRetryOptions { TryTimeout = TimeSpan.FromMinutes(5) }
 });    
 ```
@@ -116,29 +116,12 @@ var producer = new StreamingProducer(connectionString, eventHubName, new Streami
 ### Publish events using the Streaming Producer
 
 ```csharp
-// Accessing the Event Hub
-var connectionString = "<< CONNECTION STRING >>";
-var hub = "<< EVENT HUB NAME >>";
-
 // Create the streaming producer
-var producer = new StreamingProducer(connectionString, hub);
+var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
 
 // Define the Handlers
-Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
-{
-    Console.WriteLine($"The following batch was published by { args.PartitionId }:");
-    foreach (var eventData in args.EventBatch)
-    {
-        Console.WriteLine($"Event Body is: { eventData.EventBody.ToString() }");
-    }
-    return Task.CompletedTask;
-}
-
-Task SendFailedHandler(SendEventBatchFailedEventArgs args)
-{
-    Console.WriteLine($"Publishing FAILED due to { args.Exception.Message } in partition { args.PartitionId }");
-    return Task.CompletedTask;
-}
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) { ... }
+Task SendFailedHandler(SendEventBatchFailedEventArgs args) { ... }
 
 // Add the handlers to the producer
 producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
@@ -146,13 +129,10 @@ producer.SendEventBatchFailedAsync += SendFailedHandler;
 
 try
 {
-    // Enqueue some events
-    for (var eventNum = 0; eventNum < 10; eventNum++)
+    // Enqueue events to be sent
+    while (TryGetEvent(out var eventData))
     {
-        var eventBody = new EventData($"Event # { eventNum }");
-
-        // This method waits until the queue has room for the given event
-        await producer.EnqueueEventAsync(eventBody);
+        await producer.EnqueueEventAsync(eventData);
     }
 }
 finally
@@ -167,29 +147,12 @@ If the application would like to send an enumerable full of events, the `Enqueue
 
 This overload is not available in the synchronous enqueuing method, since that introduces partial failures and successes, which in turn introduces additional unnecessary complexity to the application.
 ```csharp
-// Accessing the Event Hub
-var connectionString = "<< CONNECTION STRING >>";
-var hub = "<< EVENT HUB NAME >>";
-
 // Create the streaming producer
-var producer = new StreamingProducer(connectionString, hub);
+var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
 
 // Define the Handlers
-Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
-{
-    Console.WriteLine($"The following batch was published by { args.PartitionId }:");
-    foreach (var eventData in args.EventBatch)
-    {
-        Console.WriteLine($"Event Body is: { eventData.EventBody.ToString() }");
-    }
-    return Task.CompletedTask;
-}
-
-Task SendFailedHandler(SendEventBatchFailedEventArgs args)
-{
-    Console.WriteLine($"Publishing FAILED due to { args.Exception.Message } in partition { args.PartitionId }");
-    return Task.CompletedTask;
-}
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) {...}
+Task SendFailedHandler(SendEventBatchFailedEventArgs args) {...}
 
 // Add the handlers to the producer
 producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
@@ -197,17 +160,12 @@ producer.SendEventBatchFailedAsync += SendFailedHandler;
 
 try
 {
-    var eventList = new List<EventData>();
-
-    // Define some events
-    for (var eventNum = 0; eventNum < 10; eventNum++)
+    // Enqueue Lists of events
+    while (TryGetEventList(out var eventDataList))
     {
-        var eventBody = new EventData($"Event # { eventNum }");
-        eventList.Add(eventBody);
+        await producer.EnqueueEventAsync(eventDataList);
     }
 
-    // Enqueue them
-    await producer.EnqueueEventAsync(eventList);
 }
 finally
 {
@@ -218,29 +176,12 @@ finally
 
 ### Publish events to a specific partition
 ```csharp
-// Accessing the Event Hub
-var connectionString = "<< CONNECTION STRING >>";
-var hub = "<< EVENT HUB NAME >>";
-
 // Create the streaming producer
-var producer = new StreamingProducer(connectionString, hub);
+var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
 
 // Define the Handlers
-Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
-{
-    Console.WriteLine($"The following batch was published by { args.PartitionId }:");
-    foreach (var eventData in args.EventBatch)
-    {
-        Console.WriteLine($"Event Body is: { eventData.EventBody.ToString() }");
-    }
-    return Task.CompletedTask;
-}
-
-Task SendFailedHandler(SendEventBatchFailedEventArgs args)
-{
-    Console.WriteLine($"Publishing FAILED due to { args.Exception.Message } in partition { args.PartitionId }");
-    return Task.CompletedTask;
-}
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) {...}
+Task SendFailedHandler(SendEventBatchFailedEventArgs args) {...}
 
 // Add the handlers to the producer
 producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
@@ -256,13 +197,10 @@ try
         // PartitionKey = "SomeKey"
     };
 
-    // Enqueue some events
-    for (var eventNum = 0; eventNum < 10; eventNum++)
+    // Enqueue events to be sent
+    while (TryGetEvent(out var eventData))
     {
-        var eventBody = new EventData($"Event # { eventNum }");
-
-        // This method waits until the queue has room for the given event
-        await producer.EnqueueEventAsync(eventBody, enqueueOptions);
+        await producer.EnqueueEventAsync(eventData, enqueueOptions);
     }
 }
 finally
@@ -272,42 +210,76 @@ finally
 }
 ```
 
-### Failure recovery: poison messages
-When publishing to the Event Hub occasionally an error that is not resolved through retires may occur.  While some may be recovered if allowed to continue retrying, others may be terminal.  For example, a poison message that will never succeed. For Event Hubs, this could be the result of an event exceeding the maximum message size allowed by the Event Hubs service. Another could be if the application requires that an event be processed within a specific timeframe, so messages that are too old are meaningless. Since both of these failure indicate that the message can never be published/processed, the application will need to deal with the failure elsewhere in order to make forward progress.
+### Failure recovery: when ordering does not matter
+When publishing to the Event Hub occasionally an error that is not resolved through retires may occur.  While some may be recovered if allowed to continue retrying, others may be terminal. If an application does not require events to be in order, and a retriable exception occurs, then the application may want to re-add the events in that batch to the queue to try and publish them again. If a non-retriable error occurs, then that should be logged.
 ```csharp
-// Accessing the Event Hub
-var connectionString = "<< CONNECTION STRING >>";
-var hub = "<< EVENT HUB NAME >>";
+// A method to determine if a given exception means that the batch can be retried or not
+bool ShouldRetryException(Exception exception)
+{
+    if ((exception is TaskCanceledException) || (exception is OperationCanceledException))
+    {
+        exception = exception?.InnerException;
+    }
+    else if (exception is AggregateException aggregateEx)
+    {
+        exception = aggregateEx?.Flatten().InnerException;
+    }
+
+    switch (exception)
+    {
+        case null:
+            return false;
+
+        case EventHubsException ex:
+            return ex.IsTransient;
+
+        case TimeoutException:
+        case SocketException:
+        case IOException:
+        case UnauthorizedAccessException:
+            return true;
+
+        default:
+            return false;
+    }
+}
 
 // Create the streaming producer
-var producer = new StreamingProducer(connectionString, hub);
+var clientOptions = new StreamingProducerOptions{
+    // Send events concurrently to increase throughput
+    MaximumConcurrentSendsPerPartition = 4,
+
+    // Make retry policy more generous as recommended
+    RetryOptions = new EventHubsRetryOptions
+    {
+        MaximumRetries = 15
+    }
+}
+
+var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>", clientOptions);
 
 // Define the Handlers
-Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
+async Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
 {
     Console.WriteLine($"The following batch was published by { args.PartitionId }:");
     foreach (var eventData in args.EventBatch)
     {
-        Console.WriteLine($"Event Body is: { eventData.EventBody.ToString() }");
+        Console.WriteLine($"Event Id is: { eventData.Properties["EventID"] }");
     }
     return Task.CompletedTask;
 }
 
 Task SendFailedHandler(SendEventBatchFailedEventArgs args)
 {
-    Console.WriteLine($"Publishing FAILED due to { args.Exception.Message } in partition { args.PartitionId }");
-    foreach (var eventData in args.EventBatch)
+    var isRetriable = ShouldRetryException(args.Exception);
+    if (isRetriable)
     {
-        var eventBody = eventData.EventBody.ToString();
-        if (IsPoisonEvent(eventData, args.Exception, ...))
-        {
-            Console.WriteLine($"\t\t{ eventBody } was too large to send.");
-            LogPoisonEvent(eventData, ...);
-        }
-        else
-        {
-            LogFailure(eventData, args.Exception, ...);
-        }
+        // Ordering doesn't matter so requeue all the events
+        await producer.EnqueueEventAsync(args.EventBatch);
+    }
+    else
+    {
+        LogFailure(args.EventBatch, args.Exception, ...);
     }
 
     return Task.CompletedTask;
@@ -319,10 +291,16 @@ producer.SendEventBatchFailedAsync += SendFailedHandler;
 
 try
 {
+    var id = 0;
     while (TryGetNextEvent(out var eventData))
     {
+        var IDictionary<string, String> Properties = new Dictionary<string, String>();
+        Properties.add("EventID", $"event #{ id }");
+        eventData.Properties = Properties;
+        id++;
+
         await producer.EnqueueEventAsync(eventData);
-        Console.WriteLine($"There are { producer.TotalPendingEventCount } events queueud for publishing.")
+        Console.WriteLine($"There are { producer.TotalPendingEventCount } events queued for publishing.");
     }
 }
 finally
@@ -332,8 +310,109 @@ finally
 }
 ```
 
+### Failure recovery: when ordering does matter
+When publishing to the Event Hub occasionally an error that is not resolved through retires may occur.  While some may be recovered if allowed to continue retrying, others may be terminal.  
+```csharp
+// A method to determine if a given exception means that the batch can be retried or not
+bool ShouldRetryException(Exception exception)
+{
+    if ((exception is TaskCanceledException) || (exception is OperationCanceledException))
+    {
+        exception = exception?.InnerException;
+    }
+    else if (exception is AggregateException aggregateEx)
+    {
+        exception = aggregateEx?.Flatten().InnerException;
+    }
+
+    switch (exception)
+    {
+        case null:
+            return false;
+
+        case EventHubsException ex:
+            return ex.IsTransient;
+
+        case TimeoutException:
+        case SocketException:
+        case IOException:
+        case UnauthorizedAccessException:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+// Create the streaming producer
+var clientOptions = new StreamingProducerOptions{
+    // Limit duplication of event processing
+    EnableIdempotentRetries = true,
+
+    // Make retry policy very generous to avoid receiving retriable errors
+    RetryOptions = new EventHubsRetryOptions
+    {
+        MaximumRetries = 30
+    }
+}
+
+var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>", clientOptions);
+
+// Define the Handlers
+async Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
+{
+    Console.WriteLine($"The following batch was published by { args.PartitionId }:");
+    foreach (var eventData in args.EventBatch)
+    {
+        Console.WriteLine($"Event Id is: { eventData.Properties["EventID"] }");
+    }
+    return Task.CompletedTask;
+}
+
+Task SendFailedHandler(SendEventBatchFailedEventArgs args)
+{
+    var isRetriable = ShouldRetryException(args.Exception);
+    if (isRetriable)
+    {
+        // Dead letter the events that failed
+        SaveToDatabase(args.EventBatch, ...);
+    }
+    else
+    {
+        LogFailure(args.EventBatch, args.Exception, ...);
+    }
+
+    return Task.CompletedTask;
+}
+
+// Add the handlers to the producer
+producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
+producer.SendEventBatchFailedAsync += SendFailedHandler;
+
+try
+{
+    var id = 0;
+    while (TryGetNextEvent(out var eventData))
+    {
+        var IDictionary<string, String> Properties = new Dictionary<string, String>();
+        Properties.add("EventID", $"event #{ id }");
+        eventData.Properties = Properties;
+        id++;
+
+        await producer.EnqueueEventAsync(eventData);
+        Console.WriteLine($"There are { producer.TotalPendingEventCount } events queued for publishing.");
+    }
+}
+finally
+{
+    // Close sends all pending queued events and then shuts down the producer
+    await producer.CloseAsync();
+}
+```
+
+
 ### Sending events immediately
-Even though the streaming producer publishes events in the background, the application may want to force events to publish immediately. Awaiting `FlushAsync` will attempt to publish all events that are waiting to be published in the queue, and upon return it will have attempted to send all events and applied the retry policy when necessary.
+Even though the streaming producer publishes events in the background, the application may want to force events to publish immediately. Awaiting `SendAsync` will attempt to publish all events that are waiting to be published in the queue, and upon return it will have attempted to send all events and applied the retry policy when necessary.
 ```csharp
 // Accessing the Event Hub
 var connectionString = "<< CONNECTION STRING >>";
@@ -374,7 +453,7 @@ try
         await producer.EnqueueEventAsync(eventBody);
 
         // Send all events on the queue before trying to send the next
-        await producer.FlushAsync();
+        await producer.SendAsync();
     }
 }
 finally
@@ -387,29 +466,12 @@ finally
 ### Closing the producer without publishing pending events
 If the application would like to shut down the producer quickly without trying to publish all pending events, there is an optional argument in the close method that allows this to happen: `CloseAsync(bool abandonPendingEvents = false, CancellationToken cancellationToken = default)`.
 ```csharp
-// Accessing the Event Hub
-var connectionString = "<< CONNECTION STRING >>";
-var hub = "<< EVENT HUB NAME >>";
-
 // Create the streaming producer
-var producer = new StreamingProducer(connectionString, hub);
+var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
 
 // Define the Handlers
-Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
-{
-    Console.WriteLine($"The following batch was published by { args.PartitionId }:");
-    foreach (var eventData in args.EventBatch)
-    {
-        Console.WriteLine($"Event Body is: { eventData.EventBody.ToString() }");
-    }
-    return Task.CompletedTask;
-}
-
-Task SendFailedHandler(SendEventBatchFailedEventArgs args)
-{
-    Console.WriteLine($"Publishing FAILED due to { args.Exception.Message } in partition { args.PartitionId }");
-    return Task.CompletedTask;
-}
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) {...}
+Task SendFailedHandler(SendEventBatchFailedEventArgs args) {...}
 
 // Add the handlers to the producer
 producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
@@ -418,15 +480,12 @@ producer.SendEventBatchFailedAsync += SendFailedHandler;
 try
 {
     // Enqueue some events
-    for (var eventNum = 0; eventNum < 10; eventNum++)
+    while (TryGetNextEvent(out var eventData))
     {
-        var eventBody = new EventData($"Event # { eventNum }");
-
-        // This method waits until the queue has room for the given event
-        await producer.EnqueueEventAsync(eventBody);
+        await producer.EnqueueEventAsync(eventData);
 
         // Send all events on the queue before trying to send the next
-        await producer.FlushAsync();
+        await producer.SendAsync();
     }
 }
 finally
@@ -439,10 +498,6 @@ finally
 ### Using idempotent retries
 
 ```csharp
-// Accessing the Event Hub
-var connectionString = "<< CONNECTION STRING >>";
-var hub = "<< EVENT HUB NAME >>";
-
 // Use the streaming producer options to enable idempotent retries
 var clientOptions = new StreamingProducerOptions
 {
@@ -450,24 +505,11 @@ var clientOptions = new StreamingProducerOptions
 };
 
 // Create the streaming producer
-var producer = new StreamingProducer(connectionString, hub, clientOptions);
+var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>", clientOptions);
 
 // Define the Handlers
-Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
-{
-    Console.WriteLine($"The following batch was published by { args.PartitionId }:");
-    foreach (var eventData in args.EventBatch)
-    {
-        Console.WriteLine($"Event Body is: { eventData.EventBody.ToString() }");
-    }
-    return Task.CompletedTask;
-}
-
-Task SendFailedHandler(SendEventBatchFailedEventArgs args)
-{
-    Console.WriteLine($"Publishing FAILED due to { args.Exception.Message } in partition { args.PartitionId }");
-    return Task.CompletedTask;
-}
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) {...}
+Task SendFailedHandler(SendEventBatchFailedEventArgs args) {...}
 
 // Add the handlers to the producer
 producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
@@ -476,12 +518,10 @@ producer.SendEventBatchFailedAsync += SendFailedHandler;
 try
 {
     // Enqueue some events
-    for (var eventNum = 0; eventNum < 10; eventNum++)
+    while (TryGetNextEvent(out var eventData))
     {
-        var eventBody = new EventData($"Event # { eventNum }");
-
         // This method waits until the queue has room for the given event
-        await producer.EnqueueEventAsync(eventBody);
+        await producer.EnqueueEventAsync(eventData);
     }
 }
 finally
@@ -491,10 +531,8 @@ finally
 }
 ```
 ## Future Enhancements for Discussion
-- `Flush(int partitionId)` which flushes the queue for partition `partitionId` 
-- `Flush(string partitionKey)` which flushes the queue for the partition mapped to by `partitionKey`
-- `Clear(int partitionId)` which clears the queue for partition `partitionId` 
-- `Clear(string partitionKey)` which clears the queue for the partition mapped to by `partitionKey`
+- `SendAsync(int partitionId)` which flushes the queue for partition `partitionId` 
+- `SendAsync(string partitionKey)` which flushes the queue for the partition mapped to by `partitionKey`
 - Customizable hash functions for mapping a partition key to a partition, could be:
     - Func passed through the options 
     - overloadable method
