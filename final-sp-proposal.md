@@ -12,15 +12,15 @@ The primary goal of the streaming producer is to provide developers the ability 
 - Fake methods are used to illustrate "something needs to happen, but the details are unimportant."  As a general rule, if an operation is not directly related to one of the Event Hubs types, it can likely be assumed that it is for illustration only.  These methods will most often use ellipses for the parameter list, in order to help differentiate them.
 
 ## Why this is needed
-When applications need to process low frequency or sparse event streams, the current approach for publishing a single event can introduce inefficiencies that could negatively impact throughput. In order to avoid this, developers need to include non-trivial overhead to their code to manage decisions around caching batches-in-progress, routing events to the correct batch, and publishing partial batches when events aren't being published frequently . With the streaming producer, applications can queue events into the producer as they are needed and the producer will take care of efficiently managing batches and publishing. 
+When applications publish events to Event Hubs using the `EventHubsProducerClient`, they hold responsibility for managing the major aspects of the publishing flow.  For example, to publish efficiently they have to manually build event batches and ensure they’re published at the appropriate time to maintain throughput.  Applications must also understand the semantics of the service if they wish to publish concurrently and maintain ordering of events.  Applications are also responsible for detecting scenarios when backpressure is needed and implementing the logic to apply it.  For many applications, this can lead to unwanted complexity and infrastructure to manage that complexity.
 
-A method to publish a single event was available in legacy versions of the Event Hubs client library. However, this method used a naïve approach of  simply publishing a batch containing one event, rendering it highly inefficient.  Developers often assumed that there was an intelligence behind the method, expecting it to leverage efficient batching, leading to overuse and poor application performance. The streaming producer returns the ability to publish a single event, but with a more efficient implementation that helps to ensure throughput and reduce resource use.
+The Streaming Producer aims to address this by allowing developers to simply enqueue events to be sent.  The producer transparently manages batches, publishing in an efficient manner, concurrency when ordering can be preserved, and applying backpressure when events are being enqueued more quickly than publishing can handle.   It also allows the ability for applications to enqueue a single event and supports implicit batching for efficiency, a frequent customer request.  
 
-The streaming producer is also directly competitive with Kafka's Producer. Kafka's producer is used by calling their send method on records (i.e. events) one at a time. The producer then adds them to a buffer and groups them for publishing, all of which is very similar to the approach intended to be taken here. To read more about the Kafka producer see their [documentation](https://kafka.apache.org/10/javadoc/org/apache/kafka/clients/producer/KafkaProducer.html). The final section in this proposal, the competitive analysis, goes into more detail about the Kafka producer as compared to the streaming producer.
+The streaming producer is also directly competitive with Kafka's Producer, which provides similar semantics for enqueuing events while implicitly batching and publishing in the background.  To read more about the Kafka producer see their [documentation](https://kafka.apache.org/10/javadoc/org/apache/kafka/clients/producer/KafkaProducer.html). The final section in this proposal, [the competitive analysis](#competitive-analysis--kafka), goes into more detail about the Kafka producer as compared to the streaming producer.
 
 ## Goals
 
-Support methods that allow applications to request to queue an event for publishing and receive notification when publishing of that event was successful or has failed.  The client should handle all details around queuing events, building efficient batches, and scheduling publishing.  
+Allow developers to enqueue events to be efficiently published without being burdened with managing batches or needing a deep understanding of Event Hubs partitioning. Publishing behavior should be understandable and performance consistent regardless of the pattern of events being enqueued.
 
 ## High level scenarios
 
@@ -44,17 +44,17 @@ Each of these sign-ups are individual, if a member submits requests to play tenn
 
 ### Kafka developers working with Event Hubs 
 
-When creating an application that leverages Azure, developers familiar with Kafka may choose to use the Kafka client library with the Event Hubs compatibility layer in order to pursue a familiar development experience and avoid the learning curve of a new service.  Because the publishing models align, a Kafka developer working with the Event Hubs streaming producer is able to leverage their existing knowledge and use familiar patterns for publishing events, reducing the learning curve and helping to deliver their Azure-based application more quickly.  This allows the developer to more fully embrace the Azure ecosystem and take advantage of cross-library concepts, such as `Azure.Identity` integration and a common diagnostics platform.  For applications taking advantage of multiple Azure services, this unlocks greater cohesion across areas of the application and amore consistent experience overall.
+When creating an application that leverages Azure, developers familiar with Kafka may choose to use the Kafka client library with the Event Hubs compatibility layer in order to pursue a familiar development experience and avoid the learning curve of a new service.  Because the publishing models align, a Kafka developer working with the Event Hubs streaming producer is able to leverage their existing knowledge and use familiar patterns for publishing events, reducing the learning curve and helping to deliver their Azure-based application more quickly.  This allows the developer to more fully embrace the Azure ecosystem and take advantage of cross-library concepts, such as `Azure.Identity` integration and a common diagnostics platform.  For applications taking advantage of multiple Azure services, this unlocks greater cohesion across areas of the application and a more consistent experience overall.
 
 ## Key concepts
+
+- The producer holds responsibility for implicitly batching events and publishing efficiently.
 
 - Each event queued for publishing is considered individual; there is no support for bundling events and forcing them to be batched together. 
 
 - The streaming functionality should be contained in a dedicated client type; the `EventHubProducerClient` API should not be made more complicated by supporting two significantly different sets of publishing semantics and guarantees.  
 
-- Streaming support requires a stateful client for each partition or partition key used, since partition assignment will be dynamic, resource cost won't be known at the creation of the producer
 
-- Similar to other Event Hubs client types, the streaming producer has a single connection with the Event Hubs service. This allows developers to better anticipate and control resource use and understand scalability in order to meet their application's throughput needs
 
 ## Usage examples
 
@@ -82,7 +82,7 @@ var producer = new StreamingProducer(connectionString, eventHubName, new Streami
     Identifier = "My Custom Streaming Producer",
     MaximumWaitTime = TimeSpan.FromMilliseconds(500),
     MaximumPendingEventCount = 500
-    RetryOptions = new EventHubsRetryOptions { TryTimeout = TimeSpan.FromMinutes(5) }
+    RetryOptions = new EventHubsRetryOptions { MaximumRetries = 25,  TryTimeout = TimeSpan.FromMinutes(5)  }
 });    
 ```
 
@@ -126,8 +126,8 @@ finally
 }
 ```
 
-### Publish an enumerable of events using the Streaming Producer
-If the application would like to send an enumerable full of events, the `EnqueueEventAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken = default)` overload provides functionality for this. An important thing to note however, is that events queued together will not necessarily be sent in the same batch. This allows the application to enqueue as many events as they want without worrying about the size of a batch. If a partition id or partition key is not specified, they also may not get sent to the same partition.
+### Publish a set of events using the Streaming Producer
+If the application would like to send an enumerable full of events, the `EnqueueEventAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken = default)` overload provides functionality for this. An important thing to note however, is that events queued together will not necessarily be sent in the same batch. This allows the application to enqueue as many events as they want without worrying about the size of a batch. 
 
 This overload is not available in the synchronous enqueuing method, since that introduces partial failures and successes, which in turn introduces additional unnecessary complexity to the application.
 ```csharp
@@ -406,21 +406,9 @@ var hub = "<< EVENT HUB NAME >>";
 var producer = new StreamingProducer(connectionString, hub);
 
 // Define the Handlers
-Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
-{
-    Console.WriteLine($"The following batch was published by { args.PartitionId }:");
-    foreach (var eventData in args.EventBatch)
-    {
-        Console.WriteLine($"Event Body is: { eventData.EventBody.ToString() }");
-    }
-    return Task.CompletedTask;
-}
-
-Task SendFailedHandler(SendEventBatchFailedEventArgs args)
-{
-    Console.WriteLine($"Publishing FAILED due to { args.Exception.Message } in partition { args.PartitionId }");
-    return Task.CompletedTask;
-}
+// Detailed discussion on real-world handler scenarios can be found above.
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) => Task.CompletedTask;
+Task SendFailedHandler(SendEventBatchFailedEventArgs args) => Task.CompletedTask;
 
 // Add the handlers to the producer
 producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
@@ -528,13 +516,13 @@ public class StreamingProducer : IAsyncDisposable
     public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, TokenCredential credential, StreamingProducerOptions streamingOptions = default);
     public StreamingProducer(EventHubConnection connection, EventHubProducerClientOptions clientOptions = default);
     
-    public int GetPartitionQueuedEventCount(string partition = default);
+    public int GetPartitionPendingEventCount(string partition = default);
 
     public virtual async Task EnqueueEventAsync(EventData eventData, CancellationToken cancellationToken);
     public virtual async Task EnqueueEventAsync(EventData eventData, CancellationToken cancellationToken, EnqueueEventOptions options);
     
-    public virtual async Task EnqueueEventAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken);
-    public virtual async Task EnqueueEventAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken, EnqueueEventOptions options);
+    public virtual async Task EnqueueEventsAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken);
+    public virtual async Task EnqueueEvenstAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken, EnqueueEventOptions options);
 
     public virtual Task SendAsync(CancellationToken cancellationToken);
     internal Task ClearAsync(CancellationToken cancellationToken);
