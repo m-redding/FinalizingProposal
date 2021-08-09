@@ -574,7 +574,7 @@ public class StreamingProducer : IAsyncDisposable
     public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, TokenCredential credential, StreamingProducerOptions streamingOptions = default);
     public StreamingProducer(EventHubConnection connection, EventHubProducerClientOptions clientOptions = default);
     
-    public int GetPartitionQueuedEventCount(string partition = default);
+    public int GetPartitionPendingEventCount(string partition = default);
 
     public virtual async Task EnqueueEventAsync(EventData eventData, CancellationToken cancellationToken);
     public virtual async Task EnqueueEventAsync(EventData eventData, CancellationToken cancellationToken, EnqueueEventOptions options);
