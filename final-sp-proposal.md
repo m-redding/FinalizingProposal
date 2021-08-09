@@ -81,7 +81,7 @@ var producer = new StreamingProducer(connectionString, eventHubName, new Streami
     Identifier = "My Custom Streaming Producer",
     MaximumWaitTime = TimeSpan.FromMilliseconds(500),
     MaximumPendingEventCount = 500
-    RetryOptions = new EventHubsRetryOptions { TryTimeout = TimeSpan.FromMinutes(5) }
+    RetryOptions = new EventHubsRetryOptions { MaximumRetries = 25,  TryTimeout = TimeSpan.FromMinutes(5)  }
 });    
 ```
 
