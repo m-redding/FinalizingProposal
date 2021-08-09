@@ -579,8 +579,8 @@ public class StreamingProducer : IAsyncDisposable
     public virtual async Task EnqueueEventAsync(EventData eventData, CancellationToken cancellationToken);
     public virtual async Task EnqueueEventAsync(EventData eventData, CancellationToken cancellationToken, EnqueueEventOptions options);
     
-    public virtual async Task EnqueueEventAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken);
-    public virtual async Task EnqueueEventAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken, EnqueueEventOptions options);
+    public virtual async Task EnqueueEventsAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken);
+    public virtual async Task EnqueueEvenstAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken, EnqueueEventOptions options);
 
     public virtual Task SendAsync(CancellationToken cancellationToken);
     internal Task ClearAsync(CancellationToken cancellationToken);
