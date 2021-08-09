@@ -48,6 +48,8 @@ When creating an application that leverages Azure, developers familiar with Kafk
 
 ## Key concepts
 
+- The producer holds responsibility for implicitly batching events and publishing efficiently.
+
 - Each event queued for publishing is considered individual; there is no support for bundling events and forcing them to be batched together. 
 
 - The streaming functionality should be contained in a dedicated client type; the `EventHubProducerClient` API should not be made more complicated by supporting two significantly different sets of publishing semantics and guarantees.  
