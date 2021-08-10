@@ -443,7 +443,7 @@ public class StreamingProducer : IAsyncDisposable
     public virtual async Task EnqueueEventsAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken);
     public virtual async Task EnqueueEvenstAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken, EnqueueEventOptions options);
 
-    public virtual Task SendAsync(CancellationToken cancellationToken);
+    public virtual Task FlushAsync(CancellationToken cancellationToken);
     internal Task ClearAsync(CancellationToken cancellationToken);
 
     public virtual ValueTask CloseAsync(CancellationToken cancellationToken);
