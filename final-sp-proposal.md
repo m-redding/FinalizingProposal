@@ -70,8 +70,11 @@ var producer = new StreamingProducer(connectionString, eventHubName);
 ```
 
 ### Creating the client with custom options
-TODO: update
-The application can decide if it wants to send multiple batches to the same partition concurrently. The default value of `MaximumConcurrentSendsPerPartition` is 1, meaning that the producer will try to publish a batch to a partition and then finish applying the retry policy before trying to publish another batch to that same partition. This is useful when events are independent and can be processed in parallel without worrying about which was processed first. This functionality cannot be used at the same time as idempotency however, since idempotency inherently depends on event ordering. 
+The streaming producer can be configured with all of the underlying `EventHubProducerClientOptions`, in addition to the options below:
+- `MaximumConcurrentSendsPerPartition`
+- `EnableIdempotentRetries`
+- `MaximumPendingEventCount`
+- `MaximumWaitTime`
 ```csharp  
 var connectionString = "<< CONNECTION STRING >>";
 var eventHubName = "<< EVENT HUB NAME >>";
@@ -98,14 +101,30 @@ var producer = new StreamingProducer(fullyQualifiedNamespace, eventHubName, cred
 ```
 
 ### Publish events using the Streaming Producer
+When the application enqueues events, it is required to define a `SendEventBatchFailedAsync` handler, and can include a `SendEventBatchSucceededAsync`. 
+- `SendEventBatchFailedAsync`: This handler is passed a set of args that provide contextual information on the event that a batch failed to send. The args include a set of all the events that failed to send, the partition Id of the partition they were sent to, and the exception for why they failed to send. This handler cannot influence the producer's behavior, but rather is just to provide the application with information.
+- `SendEventBatchSucceededAsync`: This handler is the same as above, but only includes the set of the events and the partition Id. This handler is also only for informational purposes and does not influence the producer's behavior.
 
 ```csharp
 // Create the streaming producer
 var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
 
 // Define the Handlers
-Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) { ... }
-Task SendFailedHandler(SendEventBatchFailedEventArgs args) { ... }
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) 
+{
+    foreach(var eventData in args.EventBatch)
+    {
+        LogSuccessfulEventPublish(eventData, ...);
+    }
+}
+
+Task SendFailedHandler(SendEventBatchFailedEventArgs args)
+{
+    foreach(var eventData in args.EventBatch)
+    {
+        LogFailedEventPublish(eventData, args.Exception, ...)
+    }
+}
 
 // Add the handlers to the producer
 producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
@@ -333,7 +352,7 @@ var clientOptions = new StreamingProducerOptions{
     // Limit duplication of event processing
     EnableIdempotentRetries = true,
 
-    // Make retry policy very generous to avoid receiving retriable errors
+    // Make retry policy very generous to limit retriable errors giving up too early
     RetryOptions = new EventHubsRetryOptions
     {
         MaximumRetries = 30
