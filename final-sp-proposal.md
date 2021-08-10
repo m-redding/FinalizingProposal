@@ -399,7 +399,7 @@ finally
 ```
 
 ## API skeleton
-This API skeleton includes the planned additional features as demonstrated above.
+
 ### `Azure.Messaging.EventHubs.Producer`
 
 ```csharp
