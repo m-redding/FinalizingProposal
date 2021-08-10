@@ -269,6 +269,7 @@ finally
 ### Failure recovery: when ordering is important to the application
 
 When publishing to the Event Hub occasionally an error that is not resolved through retires may occur.  While some may be recovered if allowed to continue retrying, others may be terminal.  
+
 ```csharp
 // A method to determine if a given exception means that the batch can be retried or not
 bool ShouldRetryException(Exception exception)
