@@ -72,7 +72,7 @@ var producer = new StreamingProducer(connectionString, eventHubName);
 
 ### Creating the client with custom options
 TODO: update
-The application can decide if it wants to send multiple batches to the same partition concurrently. The default value of `MaximumConcurrentSendsPerPartition` is 1, meaning that the producer will try to publish a batch to a partition and then finish applying the retry policy before trying to publish another batch to that same partition. This is useful when events are independent and can be processed in parallel without worrying about which was processed first. This functionality cannot be used at the same time as idempotency however, since idempotency inherently depends on event ordering. 
+Like each of the Event Hubs clients, the streaming producer supports a rich set of options for influencing it's behavior to suit application needs.  For example, developers may adjust the interval used to flush when no new events are enqueued, the amount of concurrent sends permitted, and enable idempotent retries in addition to the standard connection and retry options.
 ```csharp  
 var connectionString = "<< CONNECTION STRING >>";
 var eventHubName = "<< EVENT HUB NAME >>";
