@@ -59,6 +59,7 @@ When creating an application that leverages Azure, developers familiar with Kafk
 ## Usage examples
 
 The streaming producer supports the same set of constructors that are allowed by the `EventHubProducerClient`.
+
 ### Creating a default streaming producer
 
 ```csharp
