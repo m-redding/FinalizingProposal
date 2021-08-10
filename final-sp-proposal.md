@@ -551,7 +551,7 @@ finally
 
 #### Summary
 
-All of Kafka's messages are sent in key, value pairs. It is possible to send a body without a key, but this is not the common case. The key is used for additional information about the message, as well as to assign it to a partition. The key is hashed and then used to assign the message to a partition. Without a key, the producer uses a round robin approach to assign it to a partition, which is the same approach as the streaming producer. 
+All of Kafka's messages are sent in key/value pairs. It is possible to send a body without a key, but this is not the common case. The key is used for additional information about the message, as well as to assign it to a partition. The key is hashed and then used to assign the message to a partition. Without a key, the producer uses a round-robin approach to assign it to a partition, which is the same approach as the streaming producer. 
 
 However, the recommended approach with the streaming producer is to send it without a key or partition id unless events need to be sent to the same partition. This allows the application to take advantage of all the available partitions.
 
