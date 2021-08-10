@@ -316,20 +316,18 @@ async Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
     return Task.CompletedTask;
 }
 
-Task SendFailedHandler(SendEventBatchFailedEventArgs args)
+async Task SendFailedHandler(SendEventBatchFailedEventArgs args)
 {
-    var isRetriable = ShouldRetryException(args.Exception);
-    if (isRetriable)
-    {
-        // Dead letter the events that failed
-        SaveToDatabase(args.EventBatch, ...);
-    }
-    else
-    {
         LogFailure(args.EventBatch, args.Exception, ...);
-    }
-
-    return Task.CompletedTask;
+        
+        try
+        {
+            await DeadLetterToDatabase(args.EventBatch, ...);
+         }
+         catch (Exception ex)
+         {
+             LogDeadLetterFailure(args.EventBatch, ex);
+         }         
 }
 
 // Add the handlers to the producer
