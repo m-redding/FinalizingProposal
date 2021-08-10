@@ -202,11 +202,7 @@ When publishing to the Event Hub occasionally an error that is not resolved thro
 // A method to determine if a given exception means that the batch can be retried or not
 bool ShouldRetryException(Exception exception)
 {
-    if ((exception is TaskCanceledException) || (exception is OperationCanceledException))
-    {
-        exception = exception?.InnerException;
-    }
-    else if (exception is AggregateException aggregateEx)
+    if  (exception is AggregateException aggregateEx)
     {
         exception = aggregateEx?.Flatten().InnerException;
     }
