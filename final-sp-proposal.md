@@ -129,7 +129,7 @@ finally
 
 ### Publish a set of events using the Streaming Producer
 
-If the application would like to send an enumerable full of events, the `EnqueueEventAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken = default)` overload provides functionality for this. An important thing to note however, is that events queued together will not necessarily be sent in the same batch. This allows the application to enqueue as many events as they want without worrying about the size of a batch. 
+If the application would like to enqueue events as a set, the streaming producer provides an overload for this. An important thing to note, however, is that events queued together will not necessarily be sent in the same batch. This allows the application to enqueue as many events as they want without worrying about the size of a batch. 
 
 ```csharp
 // Create the streaming producer
