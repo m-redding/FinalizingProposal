@@ -388,8 +388,6 @@ try
     {
         await producer.EnqueueEventAsync(eventData);
 
-        // Send all events on the queue before trying to send the next
-        await producer.SendAsync();
     }
 }
 finally
