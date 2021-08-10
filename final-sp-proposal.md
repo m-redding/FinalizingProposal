@@ -225,7 +225,7 @@ bool ShouldRetryException(Exception exception)
 
 // Create the streaming producer
 
-var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>", clientOptions);
+var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
 
 // Define the Handlers
 async Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
