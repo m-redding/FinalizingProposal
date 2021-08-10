@@ -343,8 +343,6 @@ finally
     // By default, close sends all pending queued events and then shuts down the producer
     await producer.CloseAsync();
 }
-```
-
 
 ### Sending events immediately
 Even though the streaming producer publishes events in the background, the application may want to force events to publish immediately. Awaiting `FlushAsync` will attempt to publish all events that are waiting to be published in the queue, and upon return it will have attempted to send all events and applied the retry policy when necessary.
