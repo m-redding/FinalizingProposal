@@ -1,6 +1,6 @@
 # Streaming Producer: Proposal
 
-Publishing events using the producer client is optimized for high and consistent throughput scenarios, allowing applications to collect a set of events as a batch and publish in a single operation.  In order to maximize flexibility, developers are expected to build and manage batches according to the needs of their application, allowing them to prioritize trade-offs between ensuring batch density, enforcing strict ordering of events, and publishing on a consistent and predictable schedule.
+Publishing events using the `EventHubProducerClient` is optimized for high and consistent throughput scenarios, allowing applications to collect a set of events as a batch and publish in a single operation.  In order to maximize flexibility, developers are expected to build and manage batches according to the needs of their application, allowing them to prioritize trade-offs between ensuring batch density, enforcing strict ordering of events, and publishing on a consistent and predictable schedule.
 
 The primary goal of the streaming producer is to provide developers the ability to queue events for publishing without the need to explicitly manage batching, concurrency, or service operations.  Using the streaming producer, events are implicitly organized into efficient batches as they are enqueued, and published as batches become full or a certain amount of time has elapsed with no new events queued.  When queuing events, developers may request automatic routing to a partition or explicitly control the partition in the same manner supported by the `EventHubProducerClient`, with the streaming producer owning the responsibility for understanding the service constraints to build the appropriate batches.
 
@@ -16,9 +16,9 @@ The primary goal of the streaming producer is to provide developers the ability 
 
 When applications publish events to Event Hubs using the `EventHubsProducerClient`, they hold responsibility for managing the major aspects of the publishing flow.  For example, to publish efficiently they have to manually build event batches and ensure they’re published at the appropriate time to maintain throughput.  Applications must also understand the semantics of the service if they wish to publish concurrently and maintain ordering of events.  Applications are also responsible for detecting scenarios when backpressure is needed and implementing the logic to apply it.  For many applications, this can lead to unwanted complexity and infrastructure to manage that complexity.
 
-The Streaming Producer aims to address this by allowing developers to simply enqueue events to be sent.  The producer transparently manages batches, publishing in an efficient manner, concurrency when ordering can be preserved, and applying backpressure when events are being enqueued more quickly than publishing can handle.   It also allows the ability for applications to enqueue a single event and supports implicit batching for efficiency, a frequent customer request. 
+The Streaming Producer aims to address this by allowing developers to simply enqueue events to be sent.  The producer transparently manages batches, publishing in an efficient manner, concurrency when ordering can be preserved, and applying backpressure when events are being enqueued more quickly than publishing can handle.   It also allows the ability for applications to enqueue a single event and supports implicit batching for efficiency, a frequent customer request.
 
-When looking at available cloud messaging services, all but Event Hubs has a client that provides functionality for implicit batching.  The streaming producer would fill the gap that Event Hubs currently has in their set of producer clients. One such example is Kafka's Producer. The streaming producer would directly compete with this product, which provides similar semantics for enqueuing events while implicitly batching and publishing in the background.  To read more about the Kafka producer see their [documentation](https://kafka.apache.org/10/javadoc/org/apache/kafka/clients/producer/KafkaProducer.html).  In addition, the final section in this proposal, [the competitive analysis](#competitive-analysis--kafka), goes into more detail about the Kafka producer as compared to the streaming producer.
+When looking at available cloud messaging services, all but Event Hubs have a client that provides functionality for implicit batching.  The streaming producer would fill this gap. One such example is Kafka's producer, which provides similar semantics for enqueuing events while implicitly batching and publishing in the background.  To read more about the Kafka producer see their [documentation](https://kafka.apache.org/10/javadoc/org/apache/kafka/clients/producer/KafkaProducer.html).  The final section in this proposal, [the competitive analysis](#competitive-analysis-kafka ), goes into more detail about the Kafka producer as compared to the Streaming Producer.
 
 ## Goals
 
@@ -204,11 +204,6 @@ When publishing to the Event Hub occasionally an error that is not resolved thro
 // A method to determine if a given exception means that the batch can be retried or not
 bool ShouldRetryException(Exception exception)
 {
-    if  (exception is AggregateException aggregateEx)
-    {
-        exception = aggregateEx?.Flatten().InnerException;
-    }
-
     switch (exception)
     {
         case EventHubsException ex:
@@ -273,11 +268,6 @@ When publishing to the Event Hub occasionally an error that is not resolved thro
 // A method to determine if a given exception means that the batch can be retried or not
 bool ShouldRetryException(Exception exception)
 {
-    if  (exception is AggregateException aggregateEx)
-    {
-        exception = aggregateEx?.Flatten().InnerException;
-    }
-
     switch (exception)
     {
         case EventHubsException ex:
