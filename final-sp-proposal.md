@@ -459,10 +459,10 @@ public class StreamingProducer : IAsyncDisposable
 
     public virtual ValueTask CloseAsync(CancellationToken cancellationToken);
     public virtual ValueTask CloseAsync(bool abandonPendingEvents, CancellationToken cancellationToken);
-    public virtual ValueTask DisposeAsync(CancellationToken cancellationToken);
+    public virtual ValueTask DisposeAsync();
 
-    protected virtual void OnSendEventBatchSucceededAsync(IEnumerable<EventData> events);
-    protected virtual void OnSendEventBatchFailedAsync(IEnumerable<EventData> events, Exception ex, int partitionId);
+    protected virtual Task OnSendEventBatchSucceededAsync(IEnumerable<EventData> events);
+    protected virtual Task OnSendEventBatchFailedAsync(IEnumerable<EventData> events, Exception ex, int partitionId);
 }
 ```
 
