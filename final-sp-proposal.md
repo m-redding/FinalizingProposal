@@ -87,7 +87,7 @@ var producer = new StreamingProducer(connectionString, eventHubName, new Streami
 });    
 ```
 
-### Creating the client with a fully qualified namespace and credential
+### Creating the client with a Azure.Identity credential
 
 ```csharp
 TokenCredential credential = new DefaultAzureCredential();
