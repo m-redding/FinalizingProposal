@@ -16,9 +16,9 @@ The primary goal of the streaming producer is to provide developers the ability 
 
 When applications publish events to Event Hubs using the `EventHubsProducerClient`, they hold responsibility for managing the major aspects of the publishing flow.  For example, to publish efficiently they have to manually build event batches and ensure they’re published at the appropriate time to maintain throughput.  Applications must also understand the semantics of the service if they wish to publish concurrently and maintain ordering of events.  Applications are also responsible for detecting scenarios when backpressure is needed and implementing the logic to apply it.  For many applications, this can lead to unwanted complexity and infrastructure to manage that complexity.
 
-The Streaming Producer aims to address this by allowing developers to simply enqueue events to be sent.  The producer transparently manages batches, publishing in an efficient manner, concurrency when ordering can be preserved, and applying backpressure when events are being enqueued more quickly than publishing can handle.   It also allows the ability for applications to enqueue a single event and supports implicit batching for efficiency, a frequent customer request.  
+The Streaming Producer aims to address this by allowing developers to simply enqueue events to be sent.  The producer transparently manages batches, publishing in an efficient manner, concurrency when ordering can be preserved, and applying backpressure when events are being enqueued more quickly than publishing can handle.   It also allows the ability for applications to enqueue a single event and supports implicit batching for efficiency, a frequent customer request. 
 
-The streaming producer is also directly competitive with Kafka's Producer, which provides similar semantics for enqueuing events while implicitly batching and publishing in the background.  To read more about the Kafka producer see their [documentation](https://kafka.apache.org/10/javadoc/org/apache/kafka/clients/producer/KafkaProducer.html). The final section in this proposal, [the competitive analysis](#competitive-analysis--kafka), goes into more detail about the Kafka producer as compared to the streaming producer.
+When looking at available cloud messaging services, all but Event Hubs has a client that provides functionality for implicit batching.  The streaming producer would fill the gap that Event Hubs currently has in their set of producer clients. One such example is Kafka's Producer. The streaming producer would directly compete with this product, which provides similar semantics for enqueuing events while implicitly batching and publishing in the background.  To read more about the Kafka producer see their [documentation](https://kafka.apache.org/10/javadoc/org/apache/kafka/clients/producer/KafkaProducer.html).  In addition, the final section in this proposal, [the competitive analysis](#competitive-analysis--kafka), goes into more detail about the Kafka producer as compared to the streaming producer.
 
 ## Goals
 
@@ -71,7 +71,7 @@ var producer = new StreamingProducer(connectionString, eventHubName);
 ```
 
 ### Creating the client with custom options
-TODO: update
+
 Like each of the Event Hubs clients, the streaming producer supports a rich set of options for influencing it's behavior to suit application needs.  For example, developers may adjust the interval used to flush when no new events are enqueued, the amount of concurrent sends permitted, and enable idempotent retries in addition to the standard connection and retry options.
 ```csharp  
 var connectionString = "<< CONNECTION STRING >>";
@@ -81,6 +81,8 @@ var eventHubName = "<< EVENT HUB NAME >>";
 var producer = new StreamingProducer(connectionString, eventHubName, new StreamingProducerOptions
 {
     Identifier = "My Custom Streaming Producer",
+    MaximumConcurrentSendsPerPartition = 5,
+    EnableIdempotentRetries = false,
     MaximumWaitTime = TimeSpan.FromMilliseconds(500),
     MaximumPendingEventCount = 500
     RetryOptions = new EventHubsRetryOptions { MaximumRetries = 25,  TryTimeout = TimeSpan.FromMinutes(5)  }
@@ -194,7 +196,7 @@ finally
 }
 ```
 
-### Failure recovery: when ordering does not matter to the application
+### Failure recovery: when ordering is not important to the application
 
 When publishing to the Event Hub occasionally an error that is not resolved through implicit retires may occur.  If an application does not require events to be in order, adding failed events back into the queue may be desirable for the application.
 
@@ -213,9 +215,6 @@ bool ShouldRetryException(Exception exception)
             return ex.IsTransient;
 
         case TimeoutException:
-        case SocketException:
-        case IOException:
-        case UnauthorizedAccessException:
             return true;
 
         default:
@@ -274,27 +273,17 @@ When publishing to the Event Hub occasionally an error that is not resolved thro
 // A method to determine if a given exception means that the batch can be retried or not
 bool ShouldRetryException(Exception exception)
 {
-    if ((exception is TaskCanceledException) || (exception is OperationCanceledException))
-    {
-        exception = exception?.InnerException;
-    }
-    else if (exception is AggregateException aggregateEx)
+    if  (exception is AggregateException aggregateEx)
     {
         exception = aggregateEx?.Flatten().InnerException;
     }
 
     switch (exception)
     {
-        case null:
-            return false;
-
         case EventHubsException ex:
             return ex.IsTransient;
 
         case TimeoutException:
-        case SocketException:
-        case IOException:
-        case UnauthorizedAccessException:
             return true;
 
         default:
@@ -470,7 +459,49 @@ public class StreamingProducer : IAsyncDisposable
 
 The streaming producer will offer parity with most of the features provided by Kafka's producer. Both allow events to be added to a queue of events which are implicitly batched and asynchronously published.  Both also support many of the same options for configuring behavior, including  setting the retry policy, limiting the queue size, specifying an auto-flush interval, and enabling idempotent retries.
 
-### Sending a single message
+### Creating and configuring the producer
+
+#### Kafka: Producer configuration options
+```java
+private Properties kafkaProps = new Properties();
+kafkaProperties.put("bootstrap.servers", "broker1:9092,broker2:9092");
+kafkaProperties.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer"); 
+kafkaProperties.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+
+kafkaProperties.put("client.id", "My Custom Kafka Producer");
+kafkaProperties.put("max.in.flight.requests.per.connection", 5);
+kafkaProperties.put("enable.idempotence", true);
+kafkaProperties.put("linger.ms", 500);
+kafkaProperties.put("buffer.memory", );
+kafkaProperties.put("retries", 25);
+kafkaProperties.put("delivery.timeout.ms", 300000);
+
+producer = new KafkaProducer<String, String>(kafkaProperties);
+```
+
+#### Streaming Producer: streaming producer options 
+
+```csharp  
+var connectionString = "<< CONNECTION STRING >>";
+var eventHubName = "<< EVENT HUB NAME >>";
+
+// Create the streaming producer
+var producer = new StreamingProducer(connectionString, eventHubName, new StreamingProducerOptions
+{
+    Identifier = "My Custom Streaming Producer",
+    MaximumConcurrentSendsPerPartition = 5,
+    EnableIdempotentRetries = false,
+    MaximumWaitTime = TimeSpan.FromMilliseconds(500),
+    MaximumPendingEventCount = 500
+    RetryOptions = new EventHubsRetryOptions { MaximumRetries = 25,  TryTimeout = TimeSpan.FromMinutes(5)  }
+});    
+```
+
+#### Summary
+Kafka's producer and the streaming producer both give applications options for customizing the producer. These include things like the retry policy, the amount of time before sending partial batches, and the number of pending events that can be held inside the producer. In this regard, both the Kafka producer and the Streaming producer are relatively similar.
+
+
+### Sending a general series of messages
 
 #### Kafka: Asynchronously adding to the buffer pool
 
@@ -497,55 +528,51 @@ private class FakeCallback implements Callback{
     }
 }
 
-// Sending a simple record through Kafka's send
-ProducerRecord<String, String> record = new ProducerRecord<>("Topic", "SomeKey", "SomeValue"); 
-producer.send(record, new FakeCallback());
+while (ThereExistsEvents()){
+    // A record contains a key value pair
+    ProducerRecord<String, String> record = GetEvent();
+
+    producer.send(record, new FakeCallback());
+}
 ```
 
 #### Streaming Producer: Asynchronously enqueuing an event
 
-The process from above is mimicked below using the Event Hubs streaming producer instead.
 ```csharp
-// Create the producer client
-var connectionString = "<< CONNECTION STRING >>";
-var eventHubName = "<< EVENT HUB NAME >>";
-var client = new EventHubProducerClient(connectionString, eventHubName)
+// Create the streaming producer
+var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
 
-// Create the streaming producer with default options
-var producer = new StreamingProducer(client);
+// Define the Handlers
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) { ... }
+Task SendFailedHandler(SendEventBatchFailedEventArgs args) { ... }
 
-// Define a handler, this will only get called in the case of a failure
-// This is called for each batch that is failed
-Task SendFailedHandler(SendEventBatchFailedEventArgs args)
-{
-    Console.WriteLine(args.Exception.StackTrace);
-    
-    return Task.CompletedTask;
-}
-
-// The fail handler will get called automatically when necessary
+// Add the handlers to the producer
+producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
 producer.SendEventBatchFailedAsync += SendFailedHandler;
 
 try
 {
-    var eventData = new EventData("SomeValue");
-    
-    // Create a property for the key
-    var IDictionary<string, String> Properties = new Dictionary<string, String>();
-    Properties.add("Key", "SomeKey");
-    eventData.Properties = Properties;
-
-    // Use the key to send all events with the same key to the same partition
-    var sendOptions = new EnqueueEventOptions
+    // Enqueue events to be sent
+    while (TryGetEvent(out var eventData))
     {
-        PartitionKey = "SomeKey"
-    };
+        // Create a property for the key
+        var IDictionary<string, String> Properties = new Dictionary<string, String>();
+        Properties.add("Key", "SomeKey");
+        eventData.Properties = Properties;
+
+        // Use the key to send all events with the same key to the same partition
+        var sendOptions = new EnqueueEventOptions
+        {
+            PartitionKey = "SomeKey"
+        };
 
     await producer.EnqueueEventAsync(eventData, sendOptions);
+    }
 }
 finally
-{  
-    await client.DisposeAsync();
+{
+    // By default, close sends all pending queued events and then shuts down the producer
+    await producer.CloseAsync();
 }
 ```
 
@@ -555,9 +582,9 @@ All of Kafka's messages are sent in key/value pairs. It is possible to send a bo
 
 However, the recommended approach with the streaming producer is to send it without a key or partition id unless events need to be sent to the same partition. This allows the application to take advantage of all the available partitions.
 
-### Core Failures
+### Handling successes and failures
 
-#### Kafka: Dealing with non-retriable errors
+#### Kafka: callbacks
 
 ```java
 private Properties kafkaProps = new Properties();
@@ -569,11 +596,21 @@ producer = new KafkaProducer<String, String>(kafkaProperties);
 private class ProducerCallback implements Callback {
  @Override
  public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-    if (e == someReason) {
-        // APPLICATION LOGIC TO DEAL WITH ERROR 
-    }
+    boolean wasResent = false;
+
+    // An exception was thrown
     if (e != null){
-        LogFailure(recordMetadata, e, ...);
+        if (ShouldRetryException(e)){
+            producer.send(record, new ProducerCallback());
+            wasResent = true;
+        }
+
+        LogFailure(recordMetadata, wasResent, e, ...);
+    }
+
+    // No exception was thrown
+    if (e == null){
+        LogSuccess(recordMetadata,...);
     }
  }
 }
@@ -582,81 +619,51 @@ producer.send(record, new ProducerCallback());
 ```
 
 
-#### Streaming Producer: Dealing with non-transient errors
+#### Streaming Producer: handlers
 ```csharp
-// Define handlers for the streaming events
-    
-protected async Task SendSuccessfulHandler(SendEventBatchSucceededEventArgs args)
+// Create the streaming producer
+var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
+
+// Define the Handlers
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
 {
-    foreach (var eventData in args.Events)
+    LogSuccess(args.EventBatch, ...);
+}
+
+async Task SendFailedHandler(SendEventBatchFailedEventArgs args)
+{ 
+    var wasResent = false;
+       
+    if (ShouldRetryException(args.Exception))
     {
-        var eventId = eventData.Properties["event-id"];
-        Console.WriteLine($"Event: { eventId } was published.");
+        await producer.EnqueueEventAsync(args.EventBatch);
+        wasResent = true;
     }
+    
+    LogFailure(args.EventBatch, wasResent, args.Exception, ...);
 }
 
-protected async Task SendFailedHandler(SendEventBatchFailedEventArgs args)
-{
-    Console.WriteLine("Publishing FAILED!");   
-    if (args.Exception.Reason == SomeReason)
-    {
-        // APPLICATION LOGIC TO DEAL WITH ERROR
-    } 
-    LogFailure(args.EventBatch, args.Exception, ...);
-}
-
-var connectionString = "<< CONNECTION STRING >>";
-var eventHubName = "<< EVENT HUB NAME >>";
-
-// Create the streaming producer with default options
-var producer = new StreamingProducer(connectionString, eventHubName);
-
-producer.SendEventBatchSuccessAsync += SendSucceededfulHandler;
+// Add the handlers to the producer
+producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
 producer.SendEventBatchFailedAsync += SendFailedHandler;
 
 try
 {
+    var id = 0;
     while (TryGetNextEvent(out var eventData))
     {
+       eventData.MessageId = "EventID", $"event #{ id }";
+        id++;
+
         await producer.EnqueueEventAsync(eventData);
+        Console.WriteLine($"There are { producer.TotalPendingEventCount } events queued for publishing.");
     }
 }
 finally
 {
-    await client.DisposeAsync();
+    // By default, close sends all pending queued events and then shuts down the producer
+    await producer.CloseAsync();
 }
-```
-
-#### Kafka: Dealing with retriable errors
-
-```java
-private Properties kafkaProps = new Properties();
-kafkaProperties.put("bootstrap.servers", "broker1:9092,broker2:9092");
-kafkaProperties.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer"); 
-kafkaProperties.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-
-// Increasing the timeout value to better deal with transient errors
-kafkaProperties.put("delivery.timeout.ms", 240000)
-producer = new KafkaProducer<String, String>(kafkaProperties);
-```
-
-#### Streaming producer: Dealing with retriable errors
-```csharp
-// Accessing the Event Hub
-var connectionString = "<< CONNECTION STRING >>";
-var hub = "<< EVENT HUB NAME >>";
-
-// Increasing the number of times the producer retries publishing
-var producerOptions = new StreamingProducerOptions
-{
-    RetryOptions = new EventHubsRetryOptions
-    {
-        MaximumRetries = 10
-    }
-};
-
-// Create the streaming producer
-var producer = new StreamingProducer(connectionString, hub, producerOptions);
 ```
 
 #### Summary
@@ -664,34 +671,3 @@ var producer = new StreamingProducer(connectionString, hub, producerOptions);
 Kafka's producer and the Streaming Producer both utilize pre-defined retry policies when dealing with transient or retriable errors. Rather than checking for recoverable errors in the error handler, it is recommended to determine reliability needs prior to creating the producer, and then defining the retry policy accordingly. Both Kafka and Event Hubs allow customizable retry policies, but also have their own default retry policies that can be used.
 
 Kafka prefers users to define retry policies in terms of timeouts, where the producer tries essentially as many times as possible until the timeout is reached, Event Hubs prefers users to define the maximum number of retries the producer will try to send to the service.
-
-### Customizing the producer
-#### Kafka: Producer configuration options
-```java
-private Properties kafkaProps = new Properties();
-kafkaProperties.put("bootstrap.servers", "broker1:9092,broker2:9092");
-kafkaProperties.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer"); 
-kafkaProperties.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-// SPECIFY MORE OPTIONS HERE (same form as the above)
-
-producer = new KafkaProducer<String, String>(kafkaProperties);
-```
-
-#### Streaming Producer: Streaming producer options 
-```csharp
-// Accessing the Event Hub
-var connectionString = "<< CONNECTION STRING >>";
-var hub = "<< EVENT HUB NAME >>";
-
-// Increasing the number of times the producer retries publishing
-var producerOptions = new StreamingProducerOptions
-{
-    // SPECIFY OPTIONS HERE
-};
-
-// Create the streaming producer
-var producer = new StreamingProducer(connectionString, hub, producerOptions);
-```
-
-#### Summary
-Kafka's producer and the streaming producer both give applications options for customizing the producer. These include things like the retry policy, the amount of time before sending partial batches, and the number of pending events that can be held inside the producer. In this regard, both the Kafka producer and the Streaming producer are relatively similar.
