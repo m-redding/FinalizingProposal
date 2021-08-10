@@ -349,40 +349,20 @@ finally
 Even though the streaming producer publishes events in the background, the application may want to force events to publish immediately. Awaiting `FlushAsync` will attempt to publish all events that are waiting to be published in the queue, and upon return it will have attempted to send all events and applied the retry policy when necessary.
 
 ```csharp
-// Accessing the Event Hub
-var connectionString = "<< CONNECTION STRING >>";
-var hub = "<< EVENT HUB NAME >>";
-
-// Create the streaming producer
-var producer = new StreamingProducer(connectionString, hub);
-
-// Define the Handlers
-// Detailed discussion on real-world handler scenarios can be found above.
-Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) => Task.CompletedTask;
-Task SendFailedHandler(SendEventBatchFailedEventArgs args) => Task.CompletedTask;
-
-// Add the handlers to the producer
-producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
-producer.SendEventBatchFailedAsync += SendFailedHandler;
-
-try
+// Assume that the application is modeled as a state machine where 
+// publishing events happens in bursts, according to the current state.
+private async Task PublishEvents(StreamingProducer producer)
 {
-    // Enqueue some events
-    for (var eventNum = 0; eventNum < 10; eventNum++)
+    while (GetCurrentState(...) == ApplicationState.PublishEvents)
     {
-        var eventBody = new EventData($"Event # { eventNum }");
-
-        // This method waits until the queue has room for the given event
+        var eventBody = await GetNextEventAsync(...);
         await producer.EnqueueEventAsync(eventBody);
-
-        // Send all events on the queue before trying to send the next
-        await producer.SendAsync();
     }
-}
-finally
-{
-    // Close sends all pending queued events and then shuts down the producer
-    await producer.CloseAsync();
+          
+    // The application will continue to use the producer, but would
+    // like to ensure the enqueued events have been published before
+    // transitioning to a new state.
+    await producer.FlushAsync();
 }
 ```
 
