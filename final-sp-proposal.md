@@ -468,7 +468,7 @@ public class StreamingProducer : IAsyncDisposable
 
 ## Competitive Analysis: Kafka 
 
-The streaming producer will offer parity with most of the features provided by Kafka's producer. Both allow events to be added one at a time to a queue of events which are asynchronously published after batching them together. Both also support the following options: allowing retries or not, restricting the number of events held in the queue, setting the timeout value for sending a partial batch, and enabling idempotent retries. 
+The streaming producer will offer parity with most of the features provided by Kafka's producer. Both allow events to be added to a queue of events which are implicitly batched and asynchronously published.  Both also support many of the same options for configuring behavior, including  setting the retry policy, limiting the queue size, specifying an auto-flush interval, and enabling idempotent retries.
 
 ### Sending a single message
 #### Kafka: Asynchronously adding to the buffer pool
