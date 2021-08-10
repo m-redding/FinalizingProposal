@@ -56,8 +56,6 @@ When creating an application that leverages Azure, developers familiar with Kafk
 
 - The streaming functionality should be contained in a dedicated client type; the `EventHubProducerClient` API should not be made more complicated by supporting two significantly different sets of publishing semantics and guarantees.  
 
-
-
 ## Usage examples
 
 The streaming producer supports the same set of constructors that are allowed by the `EventHubProducerClient`.
