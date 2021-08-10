@@ -197,6 +197,7 @@ finally
 ### Failure recovery: when ordering does not matter to the application
 
 When publishing to the Event Hub occasionally an error that is not resolved through implicit retires may occur.  If an application does not require events to be in order, adding failed events back into the queue may be desirable for the application.
+
 ```csharp
 // A method to determine if a given exception means that the batch can be retried or not
 bool ShouldRetryException(Exception exception)
