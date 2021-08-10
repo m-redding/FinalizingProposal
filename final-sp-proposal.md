@@ -402,8 +402,6 @@ finally
 ### `Azure.Messaging.EventHubs.Producer`
 
 ```csharp
-// These are used by the producer to pass information to the application
-// on the successful publish of a batch of events. 
 public class SendEventBatchSuccessEventArgs : EventArgs
 {
     public IEnumerable<EventData> EventBatch { get; init; }
