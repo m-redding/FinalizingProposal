@@ -628,6 +628,7 @@ finally
 ```
 
 #### Kafka: Dealing with retriable errors
+
 ```java
 private Properties kafkaProps = new Properties();
 kafkaProperties.put("bootstrap.servers", "broker1:9092,broker2:9092");
