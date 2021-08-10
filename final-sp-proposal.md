@@ -228,15 +228,7 @@ bool ShouldRetryException(Exception exception)
 var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
 
 // Define the Handlers
-async Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
-{
-    Console.WriteLine($"The following batch was published by { args.PartitionId }:");
-    foreach (var eventData in args.EventBatch)
-    {
-        Console.WriteLine($"Event Id is: { eventData.Properties["EventID"] }");
-    }
-    return Task.CompletedTask;
-}
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) {...}
 
 Task SendFailedHandler(SendEventBatchFailedEventArgs args)
 {
