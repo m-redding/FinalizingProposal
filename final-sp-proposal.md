@@ -209,9 +209,6 @@ bool ShouldRetryException(Exception exception)
 
     switch (exception)
     {
-        case null:
-            return false;
-
         case EventHubsException ex:
             return ex.IsTransient;
 
