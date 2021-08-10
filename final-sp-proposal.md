@@ -557,7 +557,9 @@ All of Kafka's messages are sent in key, value pairs. It is possible to send a b
 However, the recommended approach with the streaming producer is to send it without a key or partition id unless events need to be sent to the same partition. This allows the application to take advantage of all the available partitions.
 
 ### Core Failures
+
 #### Kafka: Dealing with non-retriable errors
+
 ```java
 private Properties kafkaProps = new Properties();
 kafkaProperties.put("bootstrap.servers", "broker1:9092,broker2:9092");
