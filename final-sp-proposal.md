@@ -504,6 +504,7 @@ producer.send(record, new FakeCallback());
 ```
 
 #### Streaming Producer: Asynchronously enqueuing an event
+
 The process from above is mimicked below using the Event Hubs streaming producer instead.
 ```csharp
 // Create the producer client
