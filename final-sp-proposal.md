@@ -367,7 +367,7 @@ private async Task PublishEvents(StreamingProducer producer)
 ```
 
 ### Closing the producer without publishing pending events
-If the application would like to shut down the producer quickly without trying to publish all pending events, there is an optional argument in the close method that allows this to happen: `CloseAsync(bool abandonPendingEvents = false, CancellationToken cancellationToken = default)`.
+If the application would like to shut down the producer quickly without publishing the events that were queued, the `Close` method offers an optional argument to influence the behavior.
 ```csharp
 // Create the streaming producer
 var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
