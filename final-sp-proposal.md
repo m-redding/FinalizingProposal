@@ -340,7 +340,7 @@ try
 }
 finally
 {
-    // Close sends all pending queued events and then shuts down the producer
+    // By default, close sends all pending queued events and then shuts down the producer
     await producer.CloseAsync();
 }
 ```
