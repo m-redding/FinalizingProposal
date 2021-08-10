@@ -90,7 +90,7 @@ var producer = new StreamingProducer(connectionString, eventHubName, new Streami
 ### Creating the client with a Azure.Identity credential
 
 ```csharp
-TokenCredential credential = new DefaultAzureCredential();
+var credential = new DefaultAzureCredential();
 var fullyQualifiedNamespace = "<< NAMESPACE (likely similar to {your-namespace}.eventhub.windows.net) >>";
 var eventHubName = "<< NAME OF THE EVENT HUB >>";
 
