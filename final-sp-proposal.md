@@ -499,7 +499,6 @@ private class FakeCallback implements Callback{
 
 // Sending a simple record through Kafka's send
 ProducerRecord<String, String> record = new ProducerRecord<>("Topic", "SomeKey", "SomeValue"); 
-
 producer.send(record, new FakeCallback());
 ```
 
