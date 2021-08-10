@@ -302,18 +302,7 @@ bool ShouldRetryException(Exception exception)
 }
 
 // Create the streaming producer
-var clientOptions = new StreamingProducerOptions{
-    // Limit duplication of event processing
-    EnableIdempotentRetries = true,
-
-    // Make retry policy very generous to avoid receiving retriable errors
-    RetryOptions = new EventHubsRetryOptions
-    {
-        MaximumRetries = 30
-    }
-}
-
-var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>", clientOptions);
+var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
 
 // Define the Handlers
 async Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
