@@ -339,9 +339,7 @@ try
     var id = 0;
     while (TryGetNextEvent(out var eventData))
     {
-        var IDictionary<string, String> Properties = new Dictionary<string, String>();
-        Properties.add("EventID", $"event #{ id }");
-        eventData.Properties = Properties;
+        eventData.MessageId = $"event #{ id }");
         id++;
 
         await producer.EnqueueEventAsync(eventData);
