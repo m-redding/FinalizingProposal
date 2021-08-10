@@ -475,6 +475,7 @@ The streaming producer will offer parity with most of the features provided by K
 #### Kafka: Asynchronously adding to the buffer pool
 
 In order to create a producer using Kafka the user needs to define the properties that the producer will use. The producer requires a list of host:port brokers, these are used to create the connection at the beginning. It also requires serializers for both the key and value type, so that the producer can serialize the key or value object to a byte array. The example below uses the built in serializers that Kafka provides. 
+
 ```java
 // Creating the producer with basic properties
 private Properties kafkaProperties = new Properties(); 
