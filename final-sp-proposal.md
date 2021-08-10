@@ -230,20 +230,17 @@ var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NA
 // Define the Handlers
 Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) {...}
 
-Task SendFailedHandler(SendEventBatchFailedEventArgs args)
-{
-    var isRetriable = ShouldRetryException(args.Exception);
-    if (isRetriable)
+async Task SendFailedHandler(SendEventBatchFailedEventArgs args)
+{ 
+    var wasResent = false;
+       
+    if (ShouldRetryException(args.Exception))
     {
-        // Ordering doesn't matter so requeue all the events
         await producer.EnqueueEventAsync(args.EventBatch);
+        wasResent = true;
     }
-    else
-    {
-        LogFailure(args.EventBatch, args.Exception, ...);
-    }
-
-    return Task.CompletedTask;
+    
+    LogFailure(args.EventBatch, wasResent, args.Exception, ...);
 }
 
 // Add the handlers to the producer
