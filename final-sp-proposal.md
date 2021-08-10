@@ -158,6 +158,7 @@ finally
 ```
 
 ### Publish events to a specific partition
+
 ```csharp
 // Create the streaming producer
 var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
