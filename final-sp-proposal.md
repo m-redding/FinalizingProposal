@@ -425,7 +425,9 @@ public class StreamingProducerOptions : EventHubProducerClientOptions
     public boolean MaximumConcurrentSendsPerPartition { get; set; } // default = 1
 }
 
-public class EnqueueEventOptions : SendEventOptions{}
+public class EnqueueEventOptions : SendEventOptions
+{
+}
 
 public class StreamingProducer : IAsyncDisposable
 {
