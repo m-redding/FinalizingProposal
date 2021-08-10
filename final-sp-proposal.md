@@ -48,6 +48,10 @@ Each of these sign-ups are individual, if a member submits requests to play tenn
 
 When creating an application that leverages Azure, developers familiar with Kafka may choose to use the Kafka client library with the Event Hubs compatibility layer in order to pursue a familiar development experience and avoid the learning curve of a new service.  Because the publishing models align, a Kafka developer working with the Event Hubs streaming producer is able to leverage their existing knowledge and use familiar patterns for publishing events, reducing the learning curve and helping to deliver their Azure-based application more quickly.  This allows the developer to more fully embrace the Azure ecosystem and take advantage of cross-library concepts, such as `Azure.Identity` integration and a common diagnostics platform.  For applications taking advantage of multiple Azure services, this unlocks greater cohesion across areas of the application and a more consistent experience overall.
 
+### Transitioning between `EventHubProducerClient` and the streaming producer
+
+See this gist ([link coming soon]()) for an example of how to translate scenarios between the two producer types that will be available in Event Hubs. 
+
 ## Key concepts
 
 - The producer holds responsibility for implicitly batching events and publishing efficiently.
