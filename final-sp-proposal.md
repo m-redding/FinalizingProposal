@@ -224,16 +224,6 @@ bool ShouldRetryException(Exception exception)
 }
 
 // Create the streaming producer
-var clientOptions = new StreamingProducerOptions{
-    // Send events concurrently to increase throughput
-    MaximumConcurrentSendsPerPartition = 4,
-
-    // Make retry policy more generous as recommended
-    RetryOptions = new EventHubsRetryOptions
-    {
-        MaximumRetries = 15
-    }
-}
 
 var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>", clientOptions);
 
