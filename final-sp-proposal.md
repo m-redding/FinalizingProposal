@@ -1,7 +1,8 @@
 # Streaming Producer: Proposal
+
 Publishing events using the producer client is optimized for high and consistent throughput scenarios, allowing applications to collect a set of events as a batch and publish in a single operation.  In order to maximize flexibility, developers are expected to build and manage batches according to the needs of their application, allowing them to prioritize trade-offs between ensuring batch density, enforcing strict ordering of events, and publishing on a consistent and predictable schedule.
 
-The primary goal of the streaming producer is to provide developers the ability to queue individual events for publishing without the need to explicitly manage batch construction, population, or service operations.  Events are collected as they are queued, organized into batches, and published by the streaming producer as batches become full or a certain amount of time has elapsed.  When queuing events, developers may request automatic routing to a partition or explicitly control the partition in the same manner supported by the `ProducerClient`, with the streaming producer managing the details of grouping events into the appropriate batches for publication.
+The primary goal of the streaming producer is to provide developers the ability to queue events for publishing without the need to explicitly manage batching, concurrency, or service operations.  Using the streaming producer, events are implicitly organized into efficient batches as they are enqueued, and published as batches become full or a certain amount of time has elapsed with no new events queued.  When queuing events, developers may request automatic routing to a partition or explicitly control the partition in the same manner supported by the `EventHubProducerClient`, with the streaming producer owning the responsibility for understanding the service constraints to build the appropriate batches.
 
 ## Things to know before reading
 
@@ -12,6 +13,7 @@ The primary goal of the streaming producer is to provide developers the ability 
 - Fake methods are used to illustrate "something needs to happen, but the details are unimportant."  As a general rule, if an operation is not directly related to one of the Event Hubs types, it can likely be assumed that it is for illustration only.  These methods will most often use ellipses for the parameter list, in order to help differentiate them.
 
 ## Why this is needed
+
 When applications publish events to Event Hubs using the `EventHubsProducerClient`, they hold responsibility for managing the major aspects of the publishing flow.  For example, to publish efficiently they have to manually build event batches and ensure they’re published at the appropriate time to maintain throughput.  Applications must also understand the semantics of the service if they wish to publish concurrently and maintain ordering of events.  Applications are also responsible for detecting scenarios when backpressure is needed and implementing the logic to apply it.  For many applications, this can lead to unwanted complexity and infrastructure to manage that complexity.
 
 The Streaming Producer aims to address this by allowing developers to simply enqueue events to be sent.  The producer transparently manages batches, publishing in an efficient manner, concurrency when ordering can be preserved, and applying backpressure when events are being enqueued more quickly than publishing can handle.   It also allows the ability for applications to enqueue a single event and supports implicit batching for efficiency, a frequent customer request.  
@@ -54,11 +56,10 @@ When creating an application that leverages Azure, developers familiar with Kafk
 
 - The streaming functionality should be contained in a dedicated client type; the `EventHubProducerClient` API should not be made more complicated by supporting two significantly different sets of publishing semantics and guarantees.  
 
-
-
 ## Usage examples
 
 The streaming producer supports the same set of constructors that are allowed by the `EventHubProducerClient`.
+
 ### Creating a default streaming producer
 
 ```csharp
@@ -70,11 +71,8 @@ var producer = new StreamingProducer(connectionString, eventHubName);
 ```
 
 ### Creating the client with custom options
-The streaming producer can be configured with all of the underlying `EventHubProducerClientOptions`, in addition to the options below:
-- `MaximumConcurrentSendsPerPartition`
-- `EnableIdempotentRetries`
-- `MaximumPendingEventCount`
-- `MaximumWaitTime`
+TODO: update
+Like each of the Event Hubs clients, the streaming producer supports a rich set of options for influencing it's behavior to suit application needs.  For example, developers may adjust the interval used to flush when no new events are enqueued, the amount of concurrent sends permitted, and enable idempotent retries in addition to the standard connection and retry options.
 ```csharp  
 var connectionString = "<< CONNECTION STRING >>";
 var eventHubName = "<< EVENT HUB NAME >>";
@@ -89,10 +87,10 @@ var producer = new StreamingProducer(connectionString, eventHubName, new Streami
 });    
 ```
 
-### Creating the client with a fully qualified namespace and credential
+### Creating the client with a Azure.Identity credential
 
 ```csharp
-TokenCredential credential = new DefaultAzureCredential();
+var credential = new DefaultAzureCredential();
 var fullyQualifiedNamespace = "<< NAMESPACE (likely similar to {your-namespace}.eventhub.windows.net) >>";
 var eventHubName = "<< NAME OF THE EVENT HUB >>";
 
@@ -101,30 +99,14 @@ var producer = new StreamingProducer(fullyQualifiedNamespace, eventHubName, cred
 ```
 
 ### Publish events using the Streaming Producer
-When the application enqueues events, it is required to define a `SendEventBatchFailedAsync` handler, and can include a `SendEventBatchSucceededAsync`. 
-- `SendEventBatchFailedAsync`: This handler is passed a set of args that provide contextual information on the event that a batch failed to send. The args include a set of all the events that failed to send, the partition Id of the partition they were sent to, and the exception for why they failed to send. This handler cannot influence the producer's behavior, but rather is just to provide the application with information.
-- `SendEventBatchSucceededAsync`: This handler is the same as above, but only includes the set of the events and the partition Id. This handler is also only for informational purposes and does not influence the producer's behavior.
 
 ```csharp
 // Create the streaming producer
 var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
 
 // Define the Handlers
-Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) 
-{
-    foreach(var eventData in args.EventBatch)
-    {
-        LogSuccessfulEventPublish(eventData, ...);
-    }
-}
-
-Task SendFailedHandler(SendEventBatchFailedEventArgs args)
-{
-    foreach(var eventData in args.EventBatch)
-    {
-        LogFailedEventPublish(eventData, args.Exception, ...)
-    }
-}
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) { ... }
+Task SendFailedHandler(SendEventBatchFailedEventArgs args) { ... }
 
 // Add the handlers to the producer
 producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
@@ -140,15 +122,15 @@ try
 }
 finally
 {
-    // Close sends all pending queued events and then shuts down the producer
+    // By default, close sends all pending queued events and then shuts down the producer
     await producer.CloseAsync();
 }
 ```
 
 ### Publish a set of events using the Streaming Producer
-If the application would like to send an enumerable full of events, the `EnqueueEventAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken = default)` overload provides functionality for this. An important thing to note however, is that events queued together will not necessarily be sent in the same batch. This allows the application to enqueue as many events as they want without worrying about the size of a batch. 
 
-This overload is not available in the synchronous enqueuing method, since that introduces partial failures and successes, which in turn introduces additional unnecessary complexity to the application.
+If the application would like to enqueue events as a set, the streaming producer provides an overload for this. An important thing to note, however, is that events queued together will not necessarily be sent in the same batch. This allows the application to enqueue as many events as they want without worrying about the size of a batch. 
+
 ```csharp
 // Create the streaming producer
 var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
@@ -164,20 +146,19 @@ producer.SendEventBatchFailedAsync += SendFailedHandler;
 try
 {
     // Enqueue Lists of events
-    while (TryGetEventList(out var eventDataList))
-    {
-        await producer.EnqueueEventAsync(eventDataList);
-    }
+    var largeSetOfEvents = GenerateEvents(...);    
+    await producer.EnqueueEventAsync(largeSetOfEvents);
 
 }
 finally
 {
-    // Close sends all pending queued events and then shuts down the producer
+    // By default, close sends all pending queued events and then shuts down the producer
     await producer.CloseAsync();
 }
 ```
 
 ### Publish events to a specific partition
+
 ```csharp
 // Create the streaming producer
 var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
@@ -208,31 +189,26 @@ try
 }
 finally
 {
-    // Close sends all pending queued events and then shuts down the producer
+    // By default, close sends all pending queued events and then shuts down the producer
     await producer.CloseAsync();
 }
 ```
 
-### Failure recovery: when ordering does not matter
-When publishing to the Event Hub occasionally an error that is not resolved through retires may occur.  While some may be recovered if allowed to continue retrying, others may be terminal. If an application does not require events to be in order, and a retriable exception occurs, then the application may want to re-add the events in that batch to the queue to try and publish them again. If a non-retriable error occurs, then that should be logged.
+### Failure recovery: when ordering does not matter to the application
+
+When publishing to the Event Hub occasionally an error that is not resolved through implicit retires may occur.  If an application does not require events to be in order, adding failed events back into the queue may be desirable for the application.
+
 ```csharp
 // A method to determine if a given exception means that the batch can be retried or not
 bool ShouldRetryException(Exception exception)
 {
-    if ((exception is TaskCanceledException) || (exception is OperationCanceledException))
-    {
-        exception = exception?.InnerException;
-    }
-    else if (exception is AggregateException aggregateEx)
+    if  (exception is AggregateException aggregateEx)
     {
         exception = aggregateEx?.Flatten().InnerException;
     }
 
     switch (exception)
     {
-        case null:
-            return false;
-
         case EventHubsException ex:
             return ex.IsTransient;
 
@@ -248,44 +224,23 @@ bool ShouldRetryException(Exception exception)
 }
 
 // Create the streaming producer
-var clientOptions = new StreamingProducerOptions{
-    // Send events concurrently to increase throughput
-    MaximumConcurrentSendsPerPartition = 4,
 
-    // Make retry policy more generous as recommended
-    RetryOptions = new EventHubsRetryOptions
-    {
-        MaximumRetries = 15
-    }
-}
-
-var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>", clientOptions);
+var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
 
 // Define the Handlers
-async Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
-{
-    Console.WriteLine($"The following batch was published by { args.PartitionId }:");
-    foreach (var eventData in args.EventBatch)
-    {
-        Console.WriteLine($"Event Id is: { eventData.Properties["EventID"] }");
-    }
-    return Task.CompletedTask;
-}
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) {...}
 
-Task SendFailedHandler(SendEventBatchFailedEventArgs args)
-{
-    var isRetriable = ShouldRetryException(args.Exception);
-    if (isRetriable)
+async Task SendFailedHandler(SendEventBatchFailedEventArgs args)
+{ 
+    var wasResent = false;
+       
+    if (ShouldRetryException(args.Exception))
     {
-        // Ordering doesn't matter so requeue all the events
         await producer.EnqueueEventAsync(args.EventBatch);
+        wasResent = true;
     }
-    else
-    {
-        LogFailure(args.EventBatch, args.Exception, ...);
-    }
-
-    return Task.CompletedTask;
+    
+    LogFailure(args.EventBatch, wasResent, args.Exception, ...);
 }
 
 // Add the handlers to the producer
@@ -297,9 +252,7 @@ try
     var id = 0;
     while (TryGetNextEvent(out var eventData))
     {
-        var IDictionary<string, String> Properties = new Dictionary<string, String>();
-        Properties.add("EventID", $"event #{ id }");
-        eventData.Properties = Properties;
+       eventData.MessageId = "EventID", $"event #{ id }";
         id++;
 
         await producer.EnqueueEventAsync(eventData);
@@ -308,13 +261,15 @@ try
 }
 finally
 {
-    // Close sends all pending queued events and then shuts down the producer
+    // By default, close sends all pending queued events and then shuts down the producer
     await producer.CloseAsync();
 }
 ```
 
-### Failure recovery: when ordering does matter
+### Failure recovery: when ordering is important to the application
+
 When publishing to the Event Hub occasionally an error that is not resolved through retires may occur.  While some may be recovered if allowed to continue retrying, others may be terminal.  
+
 ```csharp
 // A method to determine if a given exception means that the batch can be retried or not
 bool ShouldRetryException(Exception exception)
@@ -348,44 +303,23 @@ bool ShouldRetryException(Exception exception)
 }
 
 // Create the streaming producer
-var clientOptions = new StreamingProducerOptions{
-    // Limit duplication of event processing
-    EnableIdempotentRetries = true,
-
-    // Make retry policy very generous to limit retriable errors giving up too early
-    RetryOptions = new EventHubsRetryOptions
-    {
-        MaximumRetries = 30
-    }
-}
-
-var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>", clientOptions);
+var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
 
 // Define the Handlers
-async Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args)
-{
-    Console.WriteLine($"The following batch was published by { args.PartitionId }:");
-    foreach (var eventData in args.EventBatch)
-    {
-        Console.WriteLine($"Event Id is: { eventData.Properties["EventID"] }");
-    }
-    return Task.CompletedTask;
-}
+Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) {...}
 
-Task SendFailedHandler(SendEventBatchFailedEventArgs args)
+async Task SendFailedHandler(SendEventBatchFailedEventArgs args)
 {
-    var isRetriable = ShouldRetryException(args.Exception);
-    if (isRetriable)
-    {
-        // Dead letter the events that failed
-        SaveToDatabase(args.EventBatch, ...);
-    }
-    else
-    {
         LogFailure(args.EventBatch, args.Exception, ...);
-    }
-
-    return Task.CompletedTask;
+        
+        try
+        {
+            await DeadLetterToDatabase(args.EventBatch, ...);
+         }
+         catch (Exception ex)
+         {
+             LogDeadLetterFailure(args.EventBatch, ex);
+         }         
 }
 
 // Add the handlers to the producer
@@ -397,9 +331,7 @@ try
     var id = 0;
     while (TryGetNextEvent(out var eventData))
     {
-        var IDictionary<string, String> Properties = new Dictionary<string, String>();
-        Properties.add("EventID", $"event #{ id }");
-        eventData.Properties = Properties;
+        eventData.MessageId = $"event #{ id }");
         id++;
 
         await producer.EnqueueEventAsync(eventData);
@@ -408,54 +340,35 @@ try
 }
 finally
 {
-    // Close sends all pending queued events and then shuts down the producer
+    // By default, close sends all pending queued events and then shuts down the producer
     await producer.CloseAsync();
 }
-```
 
+### Forcing events to be sent immediately
 
-### Sending events immediately
-Even though the streaming producer publishes events in the background, the application may want to force events to publish immediately. Awaiting `SendAsync` will attempt to publish all events that are waiting to be published in the queue, and upon return it will have attempted to send all events and applied the retry policy when necessary.
+Even though the streaming producer publishes events in the background, the application may want to force events to publish immediately. Awaiting `FlushAsync` will attempt to publish all events that are waiting to be published in the queue, and upon return it will have attempted to send all events and applied the retry policy when necessary.
+
 ```csharp
-// Accessing the Event Hub
-var connectionString = "<< CONNECTION STRING >>";
-var hub = "<< EVENT HUB NAME >>";
-
-// Create the streaming producer
-var producer = new StreamingProducer(connectionString, hub);
-
-// Define the Handlers
-// Detailed discussion on real-world handler scenarios can be found above.
-Task SendSuccessfulHandler(SendEventBatchSuccessEventArgs args) => Task.CompletedTask;
-Task SendFailedHandler(SendEventBatchFailedEventArgs args) => Task.CompletedTask;
-
-// Add the handlers to the producer
-producer.SendEventBatchSucceededAsync += SendSuccessfulHandler;
-producer.SendEventBatchFailedAsync += SendFailedHandler;
-
-try
+// Assume that the application is modeled as a state machine where 
+// publishing events happens in bursts, according to the current state.
+private async Task PublishEvents(StreamingProducer producer)
 {
-    // Enqueue some events
-    for (var eventNum = 0; eventNum < 10; eventNum++)
+    while (GetCurrentState(...) == ApplicationState.PublishEvents)
     {
-        var eventBody = new EventData($"Event # { eventNum }");
-
-        // This method waits until the queue has room for the given event
+        var eventBody = await GetNextEventAsync(...);
         await producer.EnqueueEventAsync(eventBody);
-
-        // Send all events on the queue before trying to send the next
-        await producer.SendAsync();
     }
-}
-finally
-{
-    // Close sends all pending queued events and then shuts down the producer
-    await producer.CloseAsync();
+          
+    // The application will continue to use the producer, but would
+    // like to ensure the enqueued events have been published before
+    // transitioning to a new state.
+    await producer.FlushAsync();
 }
 ```
 
 ### Closing the producer without publishing pending events
-If the application would like to shut down the producer quickly without trying to publish all pending events, there is an optional argument in the close method that allows this to happen: `CloseAsync(bool abandonPendingEvents = false, CancellationToken cancellationToken = default)`.
+
+If the application would like to shut down the producer quickly without publishing the events that were queued, the `Close` method offers an optional argument to influence the behavior.
 ```csharp
 // Create the streaming producer
 var producer = new StreamingProducer("<< CONNECTION STRING >>", "<< EVENT HUB NAME >>");
@@ -475,8 +388,6 @@ try
     {
         await producer.EnqueueEventAsync(eventData);
 
-        // Send all events on the queue before trying to send the next
-        await producer.SendAsync();
     }
 }
 finally
@@ -487,12 +398,10 @@ finally
 ```
 
 ## API skeleton
-This API skeleton includes the planned additional features as demonstrated above.
+
 ### `Azure.Messaging.EventHubs.Producer`
 
 ```csharp
-// These are used by the producer to pass information to the application
-// on the successful publish of a batch of events. 
 public class SendEventBatchSuccessEventArgs : EventArgs
 {
     public IEnumerable<EventData> EventBatch { get; init; }
@@ -516,7 +425,9 @@ public class StreamingProducerOptions : EventHubProducerClientOptions
     public boolean MaximumConcurrentSendsPerPartition { get; set; } // default = 1
 }
 
-public class EnqueueEventOptions : SendEventOptions{}
+public class EnqueueEventOptions : SendEventOptions
+{
+}
 
 public class StreamingProducer : IAsyncDisposable
 {
@@ -547,21 +458,24 @@ public class StreamingProducer : IAsyncDisposable
     internal Task ClearAsync(CancellationToken cancellationToken);
 
     public virtual ValueTask CloseAsync(CancellationToken cancellationToken);
-    public virtual ValueTask CloseAsync(Boolean abandonPendingEvents, CancellationToken cancellationToken);
-    public virtual ValueTask DisposeAsync(CancellationToken cancellationToken);
+    public virtual ValueTask CloseAsync(bool abandonPendingEvents, CancellationToken cancellationToken);
+    public virtual ValueTask DisposeAsync();
 
-    protected virtual void OnSendEventBatchSucceededAsync(IEnumerable<EventData> events);
-    protected virtual void OnSendEventBatchFailedAsync(IEnumerable<EventData> events, Exception ex, int partitionId);
+    protected virtual Task OnSendEventBatchSucceededAsync(IEnumerable<EventData> events);
+    protected virtual Task OnSendEventBatchFailedAsync(IEnumerable<EventData> events, Exception ex, int partitionId);
 }
 ```
 
 ## Competitive Analysis: Kafka 
 
-The streaming producer will offer parity with most of the features provided by Kafka's producer. Both allow events to be added one at a time to a queue of events which are asynchronously published after batching them together. Both also support the following options: allowing retries or not, restricting the number of events held in the queue, setting the timeout value for sending a partial batch, and enabling idempotent retries. 
+The streaming producer will offer parity with most of the features provided by Kafka's producer. Both allow events to be added to a queue of events which are implicitly batched and asynchronously published.  Both also support many of the same options for configuring behavior, including  setting the retry policy, limiting the queue size, specifying an auto-flush interval, and enabling idempotent retries.
 
 ### Sending a single message
+
 #### Kafka: Asynchronously adding to the buffer pool
+
 In order to create a producer using Kafka the user needs to define the properties that the producer will use. The producer requires a list of host:port brokers, these are used to create the connection at the beginning. It also requires serializers for both the key and value type, so that the producer can serialize the key or value object to a byte array. The example below uses the built in serializers that Kafka provides. 
+
 ```java
 // Creating the producer with basic properties
 private Properties kafkaProperties = new Properties(); 
@@ -585,11 +499,11 @@ private class FakeCallback implements Callback{
 
 // Sending a simple record through Kafka's send
 ProducerRecord<String, String> record = new ProducerRecord<>("Topic", "SomeKey", "SomeValue"); 
-
 producer.send(record, new FakeCallback());
 ```
 
 #### Streaming Producer: Asynchronously enqueuing an event
+
 The process from above is mimicked below using the Event Hubs streaming producer instead.
 ```csharp
 // Create the producer client
@@ -636,12 +550,15 @@ finally
 ```
 
 #### Summary
-All of Kafka's messages are sent in key, value pairs. It is possible to send a body without a key, but this is not the common case. The key is used for additional information about the message, as well as to assign it to a partition. The key is hashed and then used to assign the message to a partition. Without a key, the producer uses a round robin approach to assign it to a partition, which is the same approach as the streaming producer. 
+
+All of Kafka's messages are sent in key/value pairs. It is possible to send a body without a key, but this is not the common case. The key is used for additional information about the message, as well as to assign it to a partition. The key is hashed and then used to assign the message to a partition. Without a key, the producer uses a round-robin approach to assign it to a partition, which is the same approach as the streaming producer. 
 
 However, the recommended approach with the streaming producer is to send it without a key or partition id unless events need to be sent to the same partition. This allows the application to take advantage of all the available partitions.
 
 ### Core Failures
+
 #### Kafka: Dealing with non-retriable errors
+
 ```java
 private Properties kafkaProps = new Properties();
 kafkaProperties.put("bootstrap.servers", "broker1:9092,broker2:9092");
@@ -711,6 +628,7 @@ finally
 ```
 
 #### Kafka: Dealing with retriable errors
+
 ```java
 private Properties kafkaProps = new Properties();
 kafkaProperties.put("bootstrap.servers", "broker1:9092,broker2:9092");
@@ -742,6 +660,7 @@ var producer = new StreamingProducer(connectionString, hub, producerOptions);
 ```
 
 #### Summary
+
 Kafka's producer and the Streaming Producer both utilize pre-defined retry policies when dealing with transient or retriable errors. Rather than checking for recoverable errors in the error handler, it is recommended to determine reliability needs prior to creating the producer, and then defining the retry policy accordingly. Both Kafka and Event Hubs allow customizable retry policies, but also have their own default retry policies that can be used.
 
 Kafka prefers users to define retry policies in terms of timeouts, where the producer tries essentially as many times as possible until the timeout is reached, Event Hubs prefers users to define the maximum number of retries the producer will try to send to the service.
