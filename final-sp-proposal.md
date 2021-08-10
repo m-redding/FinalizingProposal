@@ -50,7 +50,7 @@ When creating an application that leverages Azure, developers familiar with Kafk
 
 ### Transitioning between `EventHubProducerClient` and the streaming producer
 
-See this gist ([link coming soon]()) for an example of how to translate scenarios between the two producer types that will be available in Event Hubs. 
+See this gist ([link coming soon]()) for an example of how to translate scenarios between the two producer types that will be available in Event Hubs. This illustrates the different levels of complexity, as well as how to frame the new streaming producer against the `EventHubProducerClient`
 
 ## Key concepts
 
