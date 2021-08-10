@@ -146,10 +146,8 @@ producer.SendEventBatchFailedAsync += SendFailedHandler;
 try
 {
     // Enqueue Lists of events
-    while (TryGetEventList(out var eventDataList))
-    {
-        await producer.EnqueueEventAsync(eventDataList);
-    }
+    var largeSetOfEvents = GenerateEvents(...);    
+    await producer.EnqueueEventAsync(largeSetOfEvents);
 
 }
 finally
