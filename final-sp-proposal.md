@@ -154,7 +154,6 @@ try
     // Enqueue Lists of events
     var largeSetOfEvents = GenerateEvents(...);    
     await producer.EnqueueEventAsync(largeSetOfEvents);
-
 }
 finally
 {
