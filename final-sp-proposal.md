@@ -404,7 +404,7 @@ public class StreamingProducerOptions : EventHubProducerClientOptions
     public TimeSpan? MaximumWaitTime { get; set; } // default = 250 ms
     public int MaximumPendingEventCount { get; set; }  // default = 2500
     public boolean EnableIdempotentRetries { get; set; } // default = false
-    public boolean MaximumConcurrentSendsPerPartition { get; set; } // default = 1
+    public int MaximumConcurrentSendsPerPartition { get; set; } // default = 1
 }
 
 public class EnqueueEventOptions : SendEventOptions
