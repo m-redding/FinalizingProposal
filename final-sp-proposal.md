@@ -407,6 +407,7 @@ public class StreamingProducerOptions : EventHubProducerClientOptions
 
 public class EnqueueEventOptions : SendEventOptions
 {
+    public EnqueueEventOptions();
 }
 
 public class StreamingProducer : IAsyncDisposable
@@ -420,20 +421,27 @@ public class StreamingProducer : IAsyncDisposable
     public virtual int TotalPendingEventCount { get; }
     public virtual bool IsClosed { get; protected set; }
     
-    public StreamingProducer(string connectionString, string eventHubName = default , StreamingProducerOptions streamingOptions = default);
-    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureNamedKeyCredential credential, StreamingProducerOptions streamingOptions = default);
-    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureSasCredential credential, StreamingProducerOptions streamingOptions = default);
-    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, TokenCredential credential, StreamingProducerOptions streamingOptions = default);
-    public StreamingProducer(EventHubConnection connection, EventHubProducerClientOptions clientOptions = default);
+    public StreamingProducer(string connectionString, string eventHubName);
+    public StreamingProducer(string connectionString, string eventHubName , StreamingProducerOptions clientOptions);
+    public StreamingProducer(string connectionString, string eventHubName);
+    public StreamingProducer(string connectionString, string eventHubName , StreamingProducerOptions clientOptions);
+    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureNamedKeyCredential credential);
+    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureNamedKeyCredential credential, StreamingProducerOptions streamingOptions);
+    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureSasCredential credential);
+    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureSasCredential credential, StreamingProducerOptions streamingOptions);
+    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, TokenCredential credential);
+    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, TokenCredential credential, StreamingProducerOptions streamingOptions);
+    public StreamingProducer(EventHubConnection connection);
+    public StreamingProducer(EventHubConnection connection, EventHubProducerClientOptions clientOptions);
     protected StreamingProducer() { }   // Mocking constructor
     
     public int GetPartitionPendingEventCount(string partition);
 
-    public virtual async Task EnqueueEventAsync(EventData eventData, CancellationToken cancellationToken);
+    public virtual async Task EnqueueEventAsync(EventData eventData, CancellationToken cancellationToken = default);
     public virtual async Task EnqueueEventAsync(EventData eventData, EnqueueEventOptions options, CancellationToken cancellationToken = default);
     
-    public virtual async Task EnqueueEventsAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken);
-    public virtual async Task EnqueueEvenstAsync(IEnumerable<EventData> eventData, CEnqueueEventOptions options, CancellationToken cancellationToken = default);
+    public virtual async Task EnqueueEventsAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken = default);
+    public virtual async Task EnqueueEventsAsync(IEnumerable<EventData> eventData, EnqueueEventOptions options, CancellationToken cancellationToken = default);
 
     public virtual Task FlushAsync(CancellationToken cancellationToken = default);
     internal Task ClearAsync(CancellationToken cancellationToken = default);
