@@ -50,10 +50,6 @@ Each of these sign-ups are individual, if a member submits requests to play tenn
 
 When creating an application that leverages Azure, developers familiar with Kafka may choose to use the Kafka client library with the Event Hubs compatibility layer in order to pursue a familiar development experience and avoid the learning curve of a new service.  Because the publishing models align, a Kafka developer working with the Event Hubs streaming producer is able to leverage their existing knowledge and use familiar patterns for publishing events, reducing the learning curve and helping to deliver their Azure-based application more quickly.  This allows the developer to more fully embrace the Azure ecosystem and take advantage of cross-library concepts, such as `Azure.Identity` integration and a common diagnostics platform.  For applications taking advantage of multiple Azure services, this unlocks greater cohesion across areas of the application and a more consistent experience overall.
 
-### Transitioning between `EventHubProducerClient` and the streaming producer
-
-See this gist ([link coming soon]()) for an example of how to translate scenarios between the two producer types that will be available in Event Hubs. This illustrates the different levels of complexity, as well as how to frame the new streaming producer against the `EventHubProducerClient`
-
 ## Key concepts
 
 - The producer holds responsibility for implicitly batching events and publishing efficiently.
@@ -446,7 +442,7 @@ public class StreamingProducer : IAsyncDisposable
     public virtual ValueTask CloseAsync(bool abandonPendingEvents, CancellationToken cancellationToken = default);
     public virtual ValueTask DisposeAsync();
 
-    protected virtual Task OnSendEventBatchSucceededAsync(IEnumerable<EventData> events);
+    protected virtual Task OnSendEventBatchSucceededAsync(string partitionId, IEnumerable<EventData> events);
     protected virtual Task OnSendEventBatchFailedAsync(string partitionId, IEnumerable<EventData> events, Exception ex);
 }
 ```
@@ -666,3 +662,7 @@ finally
 Kafka's producer and the Streaming Producer both utilize pre-defined retry policies when dealing with transient or retriable errors. Rather than checking for recoverable errors in the error handler, it is recommended to determine reliability needs prior to creating the producer, and then defining the retry policy accordingly. Both Kafka and Event Hubs allow customizable retry policies, but also have their own default retry policies that can be used.
 
 Kafka prefers users to define retry policies in terms of timeouts, where the producer tries essentially as many times as possible until the timeout is reached, Event Hubs prefers users to define the maximum number of retries the producer will try to send to the service.
+
+## Comparing `EventHubProducerClient` and the streaming producer
+
+See this gist ([link coming soon]()) for an example of how to translate scenarios between the two producer types that will be available in Event Hubs. This illustrates the different levels of complexity, as well as how to frame the new streaming producer against the `EventHubProducerClient`
