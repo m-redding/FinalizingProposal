@@ -429,7 +429,7 @@ public class StreamingProducer : IAsyncDisposable
     public StreamingProducer(EventHubConnection connection, EventHubProducerClientOptions clientOptions = default);
     protected StreamingProducer() { }   // Mocking constructor
     
-    public int GetPartitionPendingEventCount(string partition = default);
+    public int GetPartitionPendingEventCount(string partition);
 
     public virtual async Task EnqueueEventAsync(EventData eventData, CancellationToken cancellationToken);
     public virtual async Task EnqueueEventAsync(EventData eventData, CancellationToken cancellationToken, EnqueueEventOptions options);
