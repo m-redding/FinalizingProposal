@@ -426,11 +426,11 @@ public class StreamingProducer : IAsyncDisposable
     public StreamingProducer(string connectionString, string eventHubName);
     public StreamingProducer(string connectionString, string eventHubName , StreamingProducerOptions clientOptions);
     public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureNamedKeyCredential credential);
-    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureNamedKeyCredential credential, StreamingProducerOptions streamingOptions);
+    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureNamedKeyCredential credential, StreamingProducerOptions clientOptions);
     public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureSasCredential credential);
-    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureSasCredential credential, StreamingProducerOptions streamingOptions);
+    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureSasCredential credential, StreamingProducerOptions clientOptions);
     public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, TokenCredential credential);
-    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, TokenCredential credential, StreamingProducerOptions streamingOptions);
+    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, TokenCredential credential, StreamingProducerOptions clientOptions);
     public StreamingProducer(EventHubConnection connection);
     public StreamingProducer(EventHubConnection connection, EventHubProducerClientOptions clientOptions);
     protected StreamingProducer() { }   // Mocking constructor
