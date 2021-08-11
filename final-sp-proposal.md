@@ -470,7 +470,7 @@ kafkaProperties.put("buffer.memory", );
 kafkaProperties.put("retries", 25);
 kafkaProperties.put("delivery.timeout.ms", 300000);
 
-producer = new KafkaProducer<String, String>(kafkaProperties);
+KafkaProducer producer = new KafkaProducer<String, String>(kafkaProperties);
 ```
 
 #### Streaming Producer: streaming producer options 
