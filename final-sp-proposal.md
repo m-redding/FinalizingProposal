@@ -445,7 +445,7 @@ public class StreamingProducer : IAsyncDisposable
     public virtual ValueTask DisposeAsync();
 
     protected virtual Task OnSendEventBatchSucceededAsync(IEnumerable<EventData> events);
-    protected virtual Task OnSendEventBatchFailedAsync(IEnumerable<EventData> events, Exception ex, int partitionId);
+    protected virtual Task OnSendEventBatchFailedAsync(string partitionId, IEnumerable<EventData> events, Exception ex);
 }
 ```
 
