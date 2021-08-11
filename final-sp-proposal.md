@@ -432,7 +432,7 @@ public class StreamingProducer : IAsyncDisposable
     public int GetPartitionPendingEventCount(string partition);
 
     public virtual async Task EnqueueEventAsync(EventData eventData, CancellationToken cancellationToken);
-    public virtual async Task EnqueueEventAsync(EventData eventData, CancellationToken cancellationToken, EnqueueEventOptions options);
+    public virtual async Task EnqueueEventAsync(EventData eventData, EnqueueEventOptions options, CancellationToken cancellationToken = default);
     
     public virtual async Task EnqueueEventsAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken);
     public virtual async Task EnqueueEvenstAsync(IEnumerable<EventData> eventData, CancellationToken cancellationToken, EnqueueEventOptions options);
