@@ -425,14 +425,10 @@ public class StreamingProducer : IAsyncDisposable
     public StreamingProducer(string connectionString);
     public StreamingProducer(string connectionString, string eventHubName);
     public StreamingProducer(string connectionString, string eventHubName , StreamingProducerOptions clientOptions);
-    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureNamedKeyCredential credential);
-    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureNamedKeyCredential credential, StreamingProducerOptions clientOptions);
-    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureSasCredential credential);
-    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureSasCredential credential, StreamingProducerOptions clientOptions);
-    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, TokenCredential credential);
-    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, TokenCredential credential, StreamingProducerOptions clientOptions);
-    public StreamingProducer(EventHubConnection connection);
-    public StreamingProducer(EventHubConnection connection, EventHubProducerClientOptions clientOptions);
+    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureNamedKeyCredential credential, StreamingProducerOptions clientOptions = default);
+    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureSasCredential credential, StreamingProducerOptions clientOptions = default);
+    public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, TokenCredential credential, StreamingProducerOptions clientOptions = default);
+    public StreamingProducer(EventHubConnection connection, EventHubProducerClientOptions clientOptions = default);
     protected StreamingProducer() { }   // Mocking constructor
     
     public int GetPartitionPendingEventCount(string partition);
