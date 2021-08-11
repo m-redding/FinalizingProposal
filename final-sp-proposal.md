@@ -421,8 +421,10 @@ public class StreamingProducer : IAsyncDisposable
     public virtual int TotalPendingEventCount { get; }
     public virtual bool IsClosed { get; protected set; }
     
+    public StreamingProducer(string connectionString, StreamingProducerOptions clientOptions);
+    public StreamingProducer(string connectionString);
     public StreamingProducer(string connectionString, string eventHubName);
-    public StreamingProducer(string connectionString, string eventHubName , StreamingProducerOptions clientOptions);
+    public StreamingProducer(string connectionString, string eventHubName, StreamingProducerOptions clientOptions);
     public StreamingProducer(string connectionString, string eventHubName);
     public StreamingProducer(string connectionString, string eventHubName , StreamingProducerOptions clientOptions);
     public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureNamedKeyCredential credential);
