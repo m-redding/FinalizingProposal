@@ -506,7 +506,8 @@ private Properties kafkaProperties = new Properties();
 kafkaProperties.put("bootstrap.servers", "broker1:9092,broker2:9092");
 kafkaProperties.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer"); 
 kafkaProperties.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-producer = new KafkaProducer<String, String>(kafkaProperties);
+
+KafkaProducer producer = new KafkaProducer<String, String>(kafkaProperties);
 
 // Creating a callback class
 // This is called for each record that is sent
