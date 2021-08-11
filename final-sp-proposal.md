@@ -4,7 +4,7 @@ Publishing events using the `EventHubProducerClient` is optimized for high and c
 
 Feedback from developers has indicated that this approach quickly becomes complicated in real-world applications and demands applications bear the burden of that complexity.  A frequent ask is for the Event Hubs client library to include functionality to abstract that complexity away from applications and manage batching, concurrency, and sending implicitly.  Essentially, developers have let us know that they would like a higher-level type similar to the event processor, but for publishing events rather than consuming them.
 
-The primary goal of the streaming producer is to provide developers the ability to queue events for publishing without the need to explicitly manage batching, concurrency, or service operations.  Using the streaming producer, events are implicitly organized into efficient batches as they are enqueued, and published as batches become full or a certain amount of time has elapsed with no new events queued.  When queuing events, developers may request automatic routing to a partition or explicitly control the partition in the same manner supported by the `EventHubProducerClient`, with the streaming producer owning the responsibility for understanding the service constraints to build the appropriate batches.
+The primary goal of the streaming producer is allow developers to enqueue events to be efficiently published without being burdened by managing batches or needing a deep understanding of Event Hubs partitioning.  The streaming producer will provide a simplified API for publishing and offer consistent performance regardless of the pattern of events being enqueued.
 
 ## Things to know before reading
 
