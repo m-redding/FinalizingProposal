@@ -522,7 +522,7 @@ private class FakeCallback implements Callback{
     }
 }
 
-while (ThereExistsEvents()){
+while (thereExistsEvents()){
     // A record contains a key value pair
     ProducerRecord<String, String> record = GetEvent();
 
