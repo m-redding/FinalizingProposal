@@ -424,8 +424,6 @@ public class StreamingProducer : IAsyncDisposable
     public StreamingProducer(string connectionString, StreamingProducerOptions clientOptions);
     public StreamingProducer(string connectionString);
     public StreamingProducer(string connectionString, string eventHubName);
-    public StreamingProducer(string connectionString, string eventHubName, StreamingProducerOptions clientOptions);
-    public StreamingProducer(string connectionString, string eventHubName);
     public StreamingProducer(string connectionString, string eventHubName , StreamingProducerOptions clientOptions);
     public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureNamedKeyCredential credential);
     public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureNamedKeyCredential credential, StreamingProducerOptions streamingOptions);
