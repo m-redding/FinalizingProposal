@@ -419,8 +419,8 @@ public class StreamingProducer : IAsyncDisposable
     public string FullyQualifiedNamespace { get; }
     public string EventHubName { get; }
     public string Identifier { get; }
-    public int TotalPendingEventCount { get; }
-    public bool IsClosed { get; protected set; }
+    public virtual int TotalPendingEventCount { get; }
+    public virtual bool IsClosed { get; protected set; }
     
     public StreamingProducer(string connectionString, string eventHubName = default , StreamingProducerOptions streamingOptions = default);
     public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureNamedKeyCredential credential, StreamingProducerOptions streamingOptions = default);
