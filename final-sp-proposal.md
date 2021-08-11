@@ -494,7 +494,6 @@ var producer = new StreamingProducer(connectionString, eventHubName, new Streami
 #### Summary
 Kafka's producer and the streaming producer both give applications options for customizing the producer. These include things like the retry policy, the amount of time before sending partial batches, and the number of pending events that can be held inside the producer. In this regard, both the Kafka producer and the Streaming producer are relatively similar.
 
-
 ### Sending a general series of messages
 
 #### Kafka: Asynchronously adding to the buffer pool
