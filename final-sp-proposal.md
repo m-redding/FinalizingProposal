@@ -440,8 +440,8 @@ public class StreamingProducer : IAsyncDisposable
     public virtual Task FlushAsync(CancellationToken cancellationToken);
     internal Task ClearAsync(CancellationToken cancellationToken);
 
-    public virtual ValueTask CloseAsync(CancellationToken cancellationToken);
-    public virtual ValueTask CloseAsync(bool abandonPendingEvents, CancellationToken cancellationToken);
+    public virtual ValueTask CloseAsync(CancellationToken cancellationToken = default);
+    public virtual ValueTask CloseAsync(bool abandonPendingEvents, CancellationToken cancellationToken = default);
     public virtual ValueTask DisposeAsync();
 
     protected virtual Task OnSendEventBatchSucceededAsync(IEnumerable<EventData> events);
