@@ -550,9 +550,7 @@ try
     while (TryGetEvent(out var eventData))
     {
         // Create a property for the key
-        var IDictionary<string, String> Properties = new Dictionary<string, String>();
-        Properties.add("Key", "SomeKey");
-        eventData.Properties = Properties;
+        eventData.Properties.Add("Key", "SomeKey");
 
         // Use the key to send all events with the same key to the same partition
         var sendOptions = new EnqueueEventOptions
