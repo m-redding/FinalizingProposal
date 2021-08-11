@@ -427,6 +427,7 @@ public class StreamingProducer : IAsyncDisposable
     public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, AzureSasCredential credential, StreamingProducerOptions streamingOptions = default);
     public StreamingProducer(string fullyQualifiedNamespace, string eventHubName, TokenCredential credential, StreamingProducerOptions streamingOptions = default);
     public StreamingProducer(EventHubConnection connection, EventHubProducerClientOptions clientOptions = default);
+    protected StreamingProducer() { }   // Mocking constructor
     
     public int GetPartitionPendingEventCount(string partition = default);
 
